@@ -10,6 +10,21 @@ from safetensors.torch import load_file, save_file
 from kernel import weight_dequant
 
 def main(fp8_path, bf16_path):
+    """
+    Converts FP8 weights to BF16 and saves the converted weights.
+    This function reads FP8 weights from the specified directory, converts them to BF16,
+    and saves the converted weights to another specified directory. It also updates the
+    model index file to reflect the changes.
+    Args:
+        fp8_path (str): The path to the directory containing the FP8 weights and model index file.
+        bf16_path (str): The path to the directory where the converted BF16 weights will be saved.
+    Raises:
+        KeyError: If a required scale_inv tensor is missing for a weight.
+    Notes:
+        - The function assumes that the FP8 weights are stored in safetensor files.
+        - The function caches loaded safetensor files to optimize memory usage.
+        - The function updates the model index file to remove references to scale_inv tensors.
+    """
     torch.set_default_dtype(torch.bfloat16)
     os.makedirs(bf16_path, exist_ok=True)
     model_index_file = os.path.join(fp8_path, "model.safetensors.index.json")
