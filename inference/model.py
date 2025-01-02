@@ -18,6 +18,39 @@ attn_impl: Literal["naive", "absorb"] = "absorb"
 
 @dataclass
 class ModelArgs:
+    """
+    Data class for defining model arguments and hyperparameters.
+
+    Attributes:
+        max_batch_size (int): Maximum batch size.
+        max_seq_len (int): Maximum sequence length.
+        dtype (Literal["bf16", "fp8"]): Data type for computations.
+        vocab_size (int): Vocabulary size.
+        dim (int): Model dimension.
+        inter_dim (int): Intermediate dimension for MLP layers.
+        moe_inter_dim (int): Intermediate dimension for MoE layers.
+        n_layers (int): Number of transformer layers.
+        n_dense_layers (int): Number of dense layers in the model.
+        n_heads (int): Number of attention heads.
+        n_routed_experts (int): Number of routed experts for MoE layers.
+        n_shared_experts (int): Number of shared experts for MoE layers.
+        n_activated_experts (int): Number of activated experts in MoE layers.
+        n_expert_groups (int): Number of expert groups.
+        n_limited_groups (int): Number of limited groups for MoE routing.
+        score_func (Literal["softmax", "sigmoid"]): Scoring function for MoE routing.
+        route_scale (float): Scaling factor for routing scores.
+        q_lora_rank (int): LoRA rank for query projections.
+        kv_lora_rank (int): LoRA rank for key-value projections.
+        qk_nope_head_dim (int): Dimension for query-key projections without positional embeddings.
+        qk_rope_head_dim (int): Dimension for query-key projections with rotary embeddings.
+        v_head_dim (int): Dimension for value projections.
+        original_seq_len (int): Original sequence length.
+        rope_theta (float): Base for rotary positional encoding.
+        rope_factor (float): Scaling factor for extended sequence lengths.
+        beta_fast (int): Fast beta correction factor.
+        beta_slow (int): Slow beta correction factor.
+        mscale (float): Scaling factor for extended attention.
+    """
     max_batch_size: int = 8
     max_seq_len: int = 4096 * 4
     dtype: Literal["bf16", "fp8"] = "bf16"
@@ -52,6 +85,13 @@ class ModelArgs:
 
 
 class ParallelEmbedding(nn.Module):
+    """
+    Embedding layer with parallelism support across distributed processes.
+
+    Args:
+        vocab_size (int): Vocabulary size.
+        dim (int): Embedding dimension.
+    """
     def __init__(self, vocab_size: int, dim: int):
         super().__init__()
         self.vocab_size = vocab_size
@@ -64,11 +104,14 @@ class ParallelEmbedding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Perform the forward pass of the model.
+        Forward pass for parallel embedding layer.
+
         Args:
-            x (torch.Tensor): Input tensor containing indices.
+            x (torch.Tensor): Input tensor containing token indices.
+
         Returns:
-            torch.Tensor: Output tensor after embedding and optional all-reduce operation.
+            torch.Tensor: Embedded representations.
+
         Raises:
             ValueError: If `world_size` is not defined.
         """
@@ -119,6 +162,15 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
 
 
 class Linear(nn.Module):
+    """
+    Custom linear layer with support for quantized weights and optional bias.
+
+    Args:
+        in_features (int): Number of input features.
+        out_features (int): Number of output features.
+        bias (bool): Whether to include a bias term. Defaults to False.
+        dtype (optional): Data type for the layer. Defaults to `torch.bfloat16`.
+    """
     dtype = torch.bfloat16
 
     def __init__(self, in_features: int, out_features: int, bias: bool = False, dtype = None):
@@ -138,27 +190,72 @@ class Linear(nn.Module):
             self.register_parameter("bias", None)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the custom linear layer.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Transformed tensor after linear computation.
+        """
         return linear(x, self.weight, self.bias)
 
 
 class ColumnParallelLinear(Linear):
+    """
+    Linear layer with column parallelism, splitting output features across distributed processes.
+
+    Args:
+        in_features (int): Number of input features.
+        out_features (int): Total number of output features.
+        bias (bool): Whether to include a bias term. Defaults to False.
+        dtype (optional): Data type for the layer. Defaults to `torch.bfloat16`.
+    """
     def __init__(self, in_features: int, out_features: int, bias: bool = False, dtype = None):
         assert out_features % world_size == 0
         self.part_out_features = out_features // world_size
         super().__init__(in_features, self.part_out_features, bias, dtype)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for column parallel linear layer.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Transformed tensor with column-parallel computation.
+        """
         y = linear(x, self.weight, self.bias)
         return y
 
 
 class RowParallelLinear(Linear):
+    """
+    Linear layer with row parallelism, splitting input features across distributed processes.
+
+    Args:
+        in_features (int): Total number of input features.
+        out_features (int): Number of output features.
+        bias (bool): Whether to include a bias term. Defaults to False.
+        dtype (optional): Data type for the layer. Defaults to `torch.bfloat16`.
+    """
     def __init__(self, in_features: int, out_features: int, bias: bool = False, dtype = None):
         assert in_features % world_size == 0
         self.part_in_features = in_features // world_size
         super().__init__(self.part_in_features, out_features, bias, dtype)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for row parallel linear layer.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Transformed tensor with row-parallel computation.
+        """
         y = linear(x, self.weight)
         if world_size > 1:
             dist.all_reduce(y)
@@ -168,18 +265,43 @@ class RowParallelLinear(Linear):
 
 
 class RMSNorm(nn.Module):
+    """
+    Root Mean Square Layer Normalization (RMSNorm).
+
+    Args:
+        dim (int): Dimension of the input tensor.
+        eps (float): Epsilon value for numerical stability. Defaults to 1e-6.
+    """
     def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
 
     def forward(self, x: torch.Tensor):
+        """
+        Forward pass for RMSNorm.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Normalized tensor with the same shape as input.
+        """
         x = x.float()
         y = x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
         return y.type_as(self.weight) * self.weight
 
 
 def precompute_freqs_cis(args: ModelArgs) -> torch.Tensor:
+    """
+    Precomputes frequency-based complex exponential values for rotary positional embeddings.
+
+    Args:
+        args (ModelArgs): Model arguments containing positional embedding parameters.
+
+    Returns:
+        torch.Tensor: Precomputed complex exponential values for positional embeddings.
+    """
     dim = args.qk_rope_head_dim
     seqlen = args.max_seq_len
     beta_fast = args.beta_fast
@@ -215,6 +337,16 @@ def precompute_freqs_cis(args: ModelArgs) -> torch.Tensor:
 
 
 def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
+    """
+    Applies rotary positional embeddings to the input tensor.
+
+    Args:
+        x (torch.Tensor): Input tensor with positional embeddings to be applied.
+        freqs_cis (torch.Tensor): Precomputed complex exponential values for positional embeddings.
+
+    Returns:
+        torch.Tensor: Tensor with rotary embeddings applied.
+    """
     dtype = x.dtype
     x = torch.view_as_complex(x.float().view(*x.shape[:-1], -1, 2))
     freqs_cis = freqs_cis.view(1, x.size(1), 1, x.size(-1))
