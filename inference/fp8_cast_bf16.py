@@ -10,6 +10,25 @@ from safetensors.torch import load_file, save_file
 from kernel import weight_dequant
 
 def main(fp8_path, bf16_path):
+    """
+    Converts FP8 weights to BF16 and saves the converted weights.
+
+    This function reads FP8 weights from the specified directory, converts them to BF16,
+    and saves the converted weights to another specified directory. It also updates the
+    model index file to reflect the changes.
+
+    Args:
+    fp8_path (str): The path to the directory containing the FP8 weights and model index file.
+    bf16_path (str): The path to the directory where the converted BF16 weights will be saved.
+
+    Raises:
+    KeyError: If a required scale_inv tensor is missing for a weight.
+
+    Notes:
+    - The function assumes that the FP8 weights are stored in safetensor files.
+    - The function caches loaded safetensor files to optimize memory usage.
+    - The function updates the model index file to remove references to scale_inv tensors.
+    """
     torch.set_default_dtype(torch.bfloat16)
     os.makedirs(bf16_path, exist_ok=True)
     model_index_file = os.path.join(fp8_path, "model.safetensors.index.json")
@@ -23,6 +42,18 @@ def main(fp8_path, bf16_path):
 
     # Helper function to get tensor from the correct file
     def get_tensor(tensor_name):
+        """
+        Retrieves a tensor from the cached safetensor files or loads it from disk if not cached.
+
+        Args:
+            tensor_name (str): The name of the tensor to retrieve.
+
+        Returns:
+            torch.Tensor: The retrieved tensor.
+
+        Raises:
+            KeyError: If the tensor does not exist in the safetensor file.
+        """
         file_name = weight_map[tensor_name]
         if file_name not in loaded_files:
             file_path = os.path.join(fp8_path, file_name)
@@ -73,6 +104,13 @@ def main(fp8_path, bf16_path):
         
 
 if __name__ == "__main__":
+    """
+    Command-line interface for converting FP8 weights to BF16.
+
+    Arguments:
+        --input-fp8-hf-path (str): Path to the directory containing FP8 weights and model index.
+        --output-bf16-hf-path (str): Path to the directory for saving converted BF16 weights.
+    """
     parser = ArgumentParser()
     parser.add_argument("--input-fp8-hf-path", type=str, required=True)
     parser.add_argument("--output-bf16-hf-path", type=str, required=True)

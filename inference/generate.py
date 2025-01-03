@@ -12,6 +12,16 @@ from model import Transformer, ModelArgs
 
 
 def sample(logits, temperature: float = 1.0):
+    """
+    Samples a token from the logits using temperature scaling.
+
+    Args:
+        logits (torch.Tensor): The logits tensor for token predictions.
+        temperature (float, optional): Temperature for scaling logits. Defaults to 1.0.
+
+    Returns:
+        torch.Tensor: The sampled token.
+    """
     logits = logits / max(temperature, 1e-5)
     probs = torch.softmax(logits, dim=-1)
     return probs.div_(torch.empty_like(probs).exponential_(1)).argmax(dim=-1)
@@ -25,6 +35,19 @@ def generate(
     eos_id: int,
     temperature: float = 1.0
 ) -> List[List[int]]:
+    """
+    Generates new tokens based on the given prompt tokens using the specified model.
+
+    Args:
+        model (Transformer): The transformer model used for token generation.
+        prompt_tokens (List[List[int]]): A list of lists containing the prompt tokens for each sequence.
+        max_new_tokens (int): The maximum number of new tokens to generate.
+        eos_id (int): The end-of-sequence token ID.
+        temperature (float, optional): The temperature value for sampling. Defaults to 1.0.
+
+    Returns:
+        List[List[int]]: A list of lists containing the generated tokens for each sequence.
+    """
     prompt_lens = [len(t) for t in prompt_tokens]
     assert max(prompt_lens) <= model.max_seq_len
     total_len = min(model.max_seq_len, max_new_tokens + max(prompt_lens))
@@ -63,6 +86,17 @@ def main(
     max_new_tokens: int = 100,
     temperature: float = 1.0,
 ) -> None:
+    """
+    Main function to load the model and perform interactive or batch text generation.
+
+    Args:
+        ckpt_path (str): Path to the model checkpoint directory.
+        config (str): Path to the model configuration file.
+        input_file (str, optional): Path to a file containing input prompts. Defaults to "".
+        interactive (bool, optional): Whether to run in interactive mode. Defaults to True.
+        max_new_tokens (int, optional): Maximum number of new tokens to generate. Defaults to 100.
+        temperature (float, optional): Temperature for sampling. Defaults to 1.0.
+    """
     world_size = int(os.getenv("WORLD_SIZE", "1"))
     rank = int(os.getenv("RANK", "0"))
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
@@ -125,6 +159,20 @@ def main(
 
 
 if __name__ == "__main__":
+    """
+    Command-line interface for distributed text generation.
+
+    Arguments:
+        --ckpt-path (str): Path to the model checkpoint directory.
+        --config (str): Path to the model configuration file.
+        --input-file (str, optional): File containing prompts for batch processing.
+        --interactive (bool, optional): Enable interactive mode for generating text.
+        --max-new-tokens (int, optional): Maximum number of new tokens to generate. Defaults to 200.
+        --temperature (float, optional): Temperature for sampling. Defaults to 0.2.
+
+    Raises:
+        AssertionError: If neither input-file nor interactive mode is specified.
+    """
     parser = ArgumentParser()
     parser.add_argument("--ckpt-path", type=str, required=True)
     parser.add_argument("--config", type=str, required=True)
