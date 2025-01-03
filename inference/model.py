@@ -355,6 +355,21 @@ def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
 
 
 class MLA(nn.Module):
+    """
+    Multi-Headed Attention Layer (MLA).
+
+    Attributes:
+        dim (int): Dimensionality of the input features.
+        n_heads (int): Number of attention heads.
+        n_local_heads (int): Number of local attention heads for distributed systems.
+        q_lora_rank (int): Rank for low-rank query projection.
+        kv_lora_rank (int): Rank for low-rank key/value projection.
+        qk_nope_head_dim (int): Dimensionality of non-positional query/key projections.
+        qk_rope_head_dim (int): Dimensionality of rotary-positional query/key projections.
+        qk_head_dim (int): Total dimensionality of query/key projections.
+        v_head_dim (int): Dimensionality of value projections.
+        softmax_scale (float): Scaling factor for softmax in attention computation.
+    """
     def __init__(self, args: ModelArgs):
         super().__init__()
         self.dim = args.dim
@@ -390,6 +405,18 @@ class MLA(nn.Module):
             self.register_buffer("pe_cache", torch.zeros(args.max_batch_size, args.max_seq_len, self.qk_rope_head_dim), persistent=False)
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]):
+        """
+        Forward pass for the Multi-Headed Attention Layer (MLA).
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, seq_len, dim).
+            start_pos (int): Starting position in the sequence for caching.
+            freqs_cis (torch.Tensor): Precomputed complex exponential values for rotary embeddings.
+            mask (Optional[torch.Tensor]): Mask tensor to exclude certain positions from attention.
+
+        Returns:
+            torch.Tensor: Output tensor with the same shape as the input.
+        """
         bsz, seqlen, _ = x.size()
         end_pos = start_pos + seqlen
         if self.q_lora_rank == 0:
@@ -432,18 +459,61 @@ class MLA(nn.Module):
 
 
 class MLP(nn.Module):
+    """
+    Multi-Layer Perceptron (MLP) used as a feed-forward layer.
+
+    Attributes:
+        w1 (nn.Module): Linear layer for input-to-hidden transformation.
+        w2 (nn.Module): Linear layer for hidden-to-output transformation.
+        w3 (nn.Module): Additional linear layer for feature transformation.
+    """
     def __init__(self, dim: int, inter_dim: int):
+        """
+        Initializes the MLP layer.
+
+        Args:
+            dim (int): Input and output dimensionality.
+            inter_dim (int): Hidden layer dimensionality.
+        """
         super().__init__()
         self.w1 = ColumnParallelLinear(dim, inter_dim)
         self.w2 = RowParallelLinear(inter_dim, dim)
         self.w3 = ColumnParallelLinear(dim, inter_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the MLP layer.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor after MLP computation.
+        """
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
 
 
 class Gate(nn.Module):
+    """
+    Gating mechanism for routing inputs in a mixture-of-experts (MoE) model.
+
+    Attributes:
+        dim (int): Dimensionality of input features.
+        topk (int): Number of top experts activated for each input.
+        n_groups (int): Number of groups for routing.
+        topk_groups (int): Number of groups to route inputs to.
+        score_func (str): Scoring function ('softmax' or 'sigmoid').
+        route_scale (float): Scaling factor for routing weights.
+        weight (torch.nn.Parameter): Learnable weights for the gate.
+        bias (Optional[torch.nn.Parameter]): Optional bias term for the gate.
+    """
     def __init__(self, args: ModelArgs):
+        """
+        Initializes the Gate module.
+
+        Args:
+            args (ModelArgs): Model arguments containing gating parameters.
+        """
         super().__init__()
         self.dim = args.dim
         self.topk = args.n_activated_experts
@@ -455,6 +525,15 @@ class Gate(nn.Module):
         self.bias = nn.Parameter(torch.empty(args.n_routed_experts)) if self.dim == 7168 else None
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Forward pass for the gating mechanism.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Routing weights and selected expert indices.
+        """
         scores = linear(x, self.weight)
         if self.score_func == "softmax":
             scores = scores.softmax(dim=-1, dtype=torch.float32)
@@ -481,18 +560,60 @@ class Gate(nn.Module):
 
 
 class Expert(nn.Module):
+    """
+    Expert layer for Mixture-of-Experts (MoE) models.
+
+    Attributes:
+        w1 (nn.Module): Linear layer for input-to-hidden transformation.
+        w2 (nn.Module): Linear layer for hidden-to-output transformation.
+        w3 (nn.Module): Additional linear layer for feature transformation.
+    """
     def __init__(self, dim: int, inter_dim: int):
+        """
+        Initializes the Expert layer.
+
+        Args:
+            dim (int): Input and output dimensionality.
+            inter_dim (int): Hidden layer dimensionality.
+        """
         super().__init__()
         self.w1 = Linear(dim, inter_dim)
         self.w2 = Linear(inter_dim, dim)
         self.w3 = Linear(dim, inter_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the Expert layer.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor after expert computation.
+        """
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
 
 
 class MoE(nn.Module):
+    """
+    Mixture-of-Experts (MoE) module.
+
+    Attributes:
+        dim (int): Dimensionality of input features.
+        n_routed_experts (int): Total number of experts in the model.
+        n_local_experts (int): Number of experts handled locally in distributed systems.
+        n_activated_experts (int): Number of experts activated for each input.
+        gate (nn.Module): Gating mechanism to route inputs to experts.
+        experts (nn.ModuleList): List of expert modules.
+        shared_experts (nn.Module): Shared experts applied to all inputs.
+    """
     def __init__(self, args: ModelArgs):
+        """
+        Initializes the MoE module.
+
+        Args:
+            args (ModelArgs): Model arguments containing MoE parameters.
+        """
         super().__init__()
         self.dim = args.dim
         assert args.n_routed_experts % world_size == 0
@@ -507,6 +628,15 @@ class MoE(nn.Module):
         self.shared_experts = MLP(args.dim, args.n_shared_experts * args.moe_inter_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for the MoE module.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor after expert routing and computation.
+        """
         shape = x.size()
         x = x.view(-1, self.dim)
         weights, indices = self.gate(x)
@@ -525,7 +655,23 @@ class MoE(nn.Module):
 
 
 class Block(nn.Module):
+    """
+    Transformer block combining attention and feed-forward layers.
+
+    Attributes:
+        attn (nn.Module): Attention layer (MLA).
+        ffn (nn.Module): Feed-forward network (MLP or MoE).
+        attn_norm (nn.Module): Layer normalization for attention.
+        ffn_norm (nn.Module): Layer normalization for feed-forward network.
+    """
     def __init__(self, layer_id: int, args: ModelArgs):
+        """
+        Initializes the Transformer block.
+
+        Args:
+            layer_id (int): Layer index in the transformer.
+            args (ModelArgs): Model arguments containing block parameters.
+        """
         super().__init__()
         self.attn = MLA(args)
         self.ffn = MLP(args.dim, args.inter_dim) if layer_id < args.n_dense_layers else MoE(args)
@@ -533,13 +679,42 @@ class Block(nn.Module):
         self.ffn_norm = RMSNorm(args.dim)
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+        """
+        Forward pass for the Transformer block.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+            start_pos (int): Starting position in the sequence.
+            freqs_cis (torch.Tensor): Precomputed complex exponential values for rotary embeddings.
+            mask (Optional[torch.Tensor]): Mask tensor to exclude certain positions from attention.
+
+        Returns:
+            torch.Tensor: Output tensor after block computation.
+        """
         x = x + self.attn(self.attn_norm(x), start_pos, freqs_cis, mask)
         x = x + self.ffn(self.ffn_norm(x))
         return x
 
 
 class Transformer(nn.Module):
+    """
+    Transformer model with positional embeddings, multiple layers, and output projection.
+
+    Attributes:
+        max_seq_len (int): Maximum sequence length for the transformer.
+        embed (nn.Module): Embedding layer for input tokens.
+        layers (torch.nn.ModuleList): List of transformer blocks.
+        norm (nn.Module): Layer normalization applied after all blocks.
+        head (nn.Module): Output projection layer mapping to vocabulary size.
+        freqs_cis (torch.Tensor): Precomputed complex exponential values for rotary embeddings.
+    """
     def __init__(self, args: ModelArgs):
+        """
+        Initializes the Transformer model.
+
+        Args:
+            args (ModelArgs): Model arguments containing transformer parameters.
+        """
         global world_size, rank
         world_size = dist.get_world_size() if dist.is_initialized() else 1
         rank = dist.get_rank() if dist.is_initialized() else 0
@@ -556,6 +731,16 @@ class Transformer(nn.Module):
 
     @torch.inference_mode()
     def forward(self, tokens: torch.Tensor, start_pos: int = 0):
+        """
+        Forward pass for the Transformer model.
+
+        Args:
+            tokens (torch.Tensor): Input tensor of token IDs with shape (batch_size, seq_len).
+            start_pos (int, optional): Starting position in the sequence for rotary embeddings. Defaults to 0.
+
+        Returns:
+            torch.Tensor: Logits tensor of shape (batch_size, vocab_size).
+        """
         seqlen = tokens.size(1)
         h = self.embed(tokens)
         freqs_cis = self.freqs_cis[start_pos:start_pos+seqlen]
