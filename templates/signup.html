@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Sign Up</h1>
+        <form action="{{ url_for('signup') }}" method="POST">
+            <div class="form-group">
+                <label for="username" aria-label="Username">Username</label>
+                <input type="text" id="username" name="username" required aria-required="true">
+            </div>
+            <div class="form-group">
+                <label for="email" aria-label="Email">Email</label>
+                <input type="email" id="email" name="email" required aria-required="true">
+            </div>
+            <div class="form-group">
+                <label for="password" aria-label="Password">Password</label>
+                <input type="password" id="password" name="password" required aria-required="true">
+            </div>
+            <div class="form-group">
+                <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" role="presentation" aria-hidden="true"></div>
+            </div>
+            <button type="submit" aria-label="Sign Up">Sign Up</button>
+        </form>
+    </div>
+    <script src="https://hcaptcha.com/1/api.js" async defer></script>
+</body>
+</html>
