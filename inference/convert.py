@@ -64,9 +64,7 @@ def main(hf_ckpt_path, save_path, n_experts, mp, these_mps):
                 assert key in mapping
                 new_key, dim = mapping[key]
                 name = name.replace(key, new_key)
-                for i in range(mp):
-                    if i not in these_mps:
-                        continue
+                for i in these_mps:
                     new_param = param
                     if "experts" in name and "shared_experts" not in name:
                         idx = int(name.split(".")[-3])
@@ -80,9 +78,7 @@ def main(hf_ckpt_path, save_path, n_experts, mp, these_mps):
 
     os.makedirs(save_path, exist_ok=True)
 
-    for i in range(mp):
-        if i not in these_mps:
-            continue
+    for i in these_mps:
         p = os.path.join(save_path, f"model{i}-mp{mp}.safetensors")
         if os.path.exists(p):
             print(f"{p=}: already exists, skipping")
