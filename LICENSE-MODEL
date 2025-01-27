@@ -1,91 +1,138 @@
-DEEPSEEK LICENSE AGREEMENT
+# DEEPSEEK LICENSE AGREEMENT
 
-Version 1.0, 23 October 2023
+**Version 1.0, 23 October 2023**
 
 Copyright (c) 2023 DeepSeek
 
-Section I: PREAMBLE 
+---
 
-Large generative models are being widely adopted and used, and have the potential to transform the way individuals conceive and benefit from AI or ML technologies. 
+## Section I: PREAMBLE
 
-Notwithstanding the current and potential benefits that these artifacts can bring to society at large, there are also concerns about potential misuses of them, either due to their technical limitations or ethical considerations. 
+Large generative models are being widely adopted and used, with the potential to transform how individuals benefit from AI/ML technologies.
 
-In short, this license strives for both the open and responsible downstream use of the accompanying model. When it comes to the open character, we took inspiration from open source permissive licenses regarding the grant of IP rights. Referring to the downstream responsible use, we added use-based restrictions not permitting the use of the model in very specific scenarios, in order for the licensor to be able to enforce the license in case potential misuses of the Model may occur. At the same time, we strive to promote open and responsible research on generative models for content generation. 
+While these models offer benefits, concerns about their misuse due to technical limitations or ethical considerations persist. This license strives for both open and responsible downstream use of the accompanying model.
 
-Even though downstream derivative versions of the model could be released under different licensing terms, the latter will always have to include - at minimum - the same use-based restrictions as the ones in the original license (this license). We believe in the intersection between open and responsible AI development; thus, this agreement aims to strike a balance between both in order to enable responsible open-science in the field of AI. 
+We drew inspiration from permissive open-source licenses for granting IP rights and added use-based restrictions to address potential misuses. These restrictions allow enforcement in specific cases while encouraging open and responsible research on generative models for content generation.
 
-This License governs the use of the model (and its derivatives) and is informed by the model card associated with the model. 
+Downstream derivatives of the model may be released under different terms but must retain these use-based restrictions. This agreement aims to balance open and responsible AI development.
 
-NOW THEREFORE, You and DeepSeek agree as follows: 
+This License governs the use of the model (and its derivatives) and is informed by the model card associated with the model.
 
-1. Definitions 
-"License" means the terms and conditions for use, reproduction, and Distribution as defined in this document. 
-"Data" means a collection of information and/or content extracted from the dataset used with the Model, including to train, pretrain, or otherwise evaluate the Model. The Data is not licensed under this License.
-"Output" means the results of operating a Model as embodied in informational content resulting therefrom. 
-"Model" means any accompanying machine-learning based assemblies (including checkpoints), consisting of learnt weights, parameters (including optimizer states), corresponding to the model architecture as embodied in the Complementary Material, that have been trained or tuned, in whole or in part on the Data, using the Complementary Material. 
-"Derivatives of the Model" means all modifications to the Model, works based on the Model, or any other model which is created or initialized by transfer of patterns of the weights, parameters, activations or output of the Model, to the other model, in order to cause the other model to perform similarly to the Model, including - but not limited to - distillation methods entailing the use of intermediate data representations or methods based on the generation of synthetic data by the Model for training the other model. 
-"Complementary Material" means the accompanying source code and scripts used to define, run, load, benchmark or evaluate the Model, and used to prepare data for training or evaluation, if any. This includes any accompanying documentation, tutorials, examples, etc, if any. 
-"Distribution" means any transmission, reproduction, publication or other sharing of the Model or Derivatives of the Model to a third party, including providing the Model as a hosted service made available by electronic or other remote means - e.g. API-based or web access. 
-"DeepSeek" (or "we") means Beijing DeepSeek Artificial Intelligence Fundamental Technology Research Co., Ltd., Hangzhou DeepSeek Artificial Intelligence Fundamental Technology Research Co., Ltd. and/or any of their affiliates.
-"You" (or "Your") means an individual or Legal Entity exercising permissions granted by this License and/or making use of the Model for whichever purpose and in any field of use, including usage of the Model in an end-use application - e.g. chatbot, translator, etc. 
-"Third Parties" means individuals or legal entities that are not under common control with DeepSeek or You. 
+**NOW THEREFORE, You and DeepSeek agree as follows:**
 
-Section II: INTELLECTUAL PROPERTY RIGHTS 
+---
 
-Both copyright and patent grants apply to the Model, Derivatives of the Model and Complementary Material. The Model and Derivatives of the Model are subject to additional terms as described in Section III. 
+## 1. Definitions
 
-2. Grant of Copyright License. Subject to the terms and conditions of this License, DeepSeek hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare, publicly display, publicly perform, sublicense, and distribute the Complementary Material, the Model, and Derivatives of the Model. 
+### Key Terms
 
-3. Grant of Patent License. Subject to the terms and conditions of this License and where and as applicable, DeepSeek hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this paragraph) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Model and the Complementary Material, where such license applies only to those patent claims licensable by DeepSeek that are necessarily infringed by its contribution(s). If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Model and/or Complementary Material constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for the Model and/or works shall terminate as of the date such litigation is asserted or filed. 
+- **"License"**: Terms and conditions for use, reproduction, and distribution as defined in this document.
+- **"Data"**: A collection of information extracted from the dataset used with the Model (not licensed under this License).
+- **"Output"**: Results from operating the Model.
+- **"Model"**: Machine-learning assemblies (including checkpoints) trained using the Data and Complementary Material.
+- **"Derivatives of the Model"**: Modifications to the Model or models initialized by transfer of the Model's weights, parameters, activations, or outputs.
+- **"Complementary Material"**: Source code, scripts, documentation, and examples associated with the Model.
+- **"Distribution"**: Sharing of the Model or its derivatives with third parties, including hosting as a service.
+- **"DeepSeek"**: Refers to Beijing and Hangzhou DeepSeek Artificial Intelligence Fundamental Technology Research Co., Ltd. and their affiliates.
+- **"You"**: Any individual or entity exercising permissions under this License.
+- **"Third Parties"**: Individuals or entities not under control of DeepSeek or You.
 
+---
 
-Section III: CONDITIONS OF USAGE, DISTRIBUTION AND REDISTRIBUTION
+## Section II: INTELLECTUAL PROPERTY RIGHTS
 
-4. Distribution and Redistribution. You may host for Third Party remote access purposes (e.g. software-as-a-service), reproduce and distribute copies of the Model or Derivatives of the Model thereof in any medium, with or without modifications, provided that You meet the following conditions: 
-a. Use-based restrictions as referenced in paragraph 5 MUST be included as an enforceable provision by You in any type of legal agreement (e.g. a license) governing the use and/or distribution of the Model or Derivatives of the Model, and You shall give notice to subsequent users You Distribute to, that the Model or Derivatives of the Model are subject to paragraph 5. This provision does not apply to the use of Complementary Material. 
-b. You must give any Third Party recipients of the Model or Derivatives of the Model a copy of this License; 
-c. You must cause any modified files to carry prominent notices stating that You changed the files; 
-d. You must retain all copyright, patent, trademark, and attribution notices excluding those notices that do not pertain to any part of the Model, Derivatives of the Model. 
-e. You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions - respecting paragraph 4.a. – for use, reproduction, or Distribution of Your modifications, or for any such Derivatives of the Model as a whole, provided Your use, reproduction, and Distribution of the Model otherwise complies with the conditions stated in this License. 
+### 2. Grant of Copyright License
 
-5. Use-based restrictions. The restrictions set forth in Attachment A are considered Use-based restrictions. Therefore You cannot use the Model and the Derivatives of the Model for the specified restricted uses. You may use the Model subject to this License, including only for lawful purposes and in accordance with the License. Use may include creating any content with, finetuning, updating, running, training, evaluating and/or reparametrizing the Model. You shall require all of Your users who use the Model or a Derivative of the Model to comply with the terms of this paragraph (paragraph 5). 
+DeepSeek grants You a perpetual, worldwide, non-exclusive, royalty-free, irrevocable copyright license to reproduce, prepare, display, sublicense, and distribute the Model, its Derivatives, and Complementary Material.
 
-6. The Output You Generate. Except as set forth herein, DeepSeek claims no rights in the Output You generate using the Model. You are accountable for the Output you generate and its subsequent uses. No use of the output can contravene any provision as stated in the License.
+### 3. Grant of Patent License
 
-Section IV: OTHER PROVISIONS 
+DeepSeek grants You a perpetual, worldwide, non-exclusive, royalty-free, irrevocable patent license to make, use, sell, import, and distribute the Model and Complementary Material. This license terminates if You initiate patent litigation related to the Model.
 
-7. Updates and Runtime Restrictions. To the maximum extent permitted by law, DeepSeek reserves the right to restrict (remotely or otherwise) usage of the Model in violation of this License. 
+---
 
-8. Trademarks and related. Nothing in this License permits You to make use of DeepSeek’ trademarks, trade names, logos or to otherwise suggest endorsement or misrepresent the relationship between the parties; and any rights not expressly granted herein are reserved by DeepSeek. 
+## Section III: CONDITIONS OF USAGE, DISTRIBUTION, AND REDISTRIBUTION
 
-9. Personal information, IP rights and related. This Model may contain personal information and works with IP rights. You commit to complying with applicable laws and regulations in the handling of personal information and the use of such works. Please note that DeepSeek's license granted to you to use the Model does not imply that you have obtained a legitimate basis for processing the related information or works. As an independent personal information processor and IP rights user, you need to ensure full compliance with relevant legal and regulatory requirements when handling personal information and works with IP rights that may be contained in the Model, and are willing to assume solely any risks and consequences that may arise from that.
+### 4. Distribution and Redistribution
 
-10. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, DeepSeek provides the Model and the Complementary Material on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Model, Derivatives of the Model, and the Complementary Material and assume any risks associated with Your exercise of permissions under this License. 
+You may host, reproduce, and distribute the Model or its Derivatives under the following conditions:
 
-11. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall DeepSeek be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Model and the Complementary Material (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if DeepSeek has been advised of the possibility of such damages. 
+1. **Include Use-Based Restrictions**: Any license governing the Model or Derivatives must include the use-based restrictions outlined in Section 5.
+2. **Provide This License**: Ensure recipients receive a copy of this License.
+3. **Highlight Modifications**: Clearly state any modifications made to the Model.
+4. **Retain Notices**: Retain all copyright, patent, trademark, and attribution notices.
+5. **Add Additional Terms**: You may add your own copyright terms for your modifications, as long as the conditions in Section 4.1 are respected.
 
-12. Accepting Warranty or Additional Liability. While redistributing the Model, Derivatives of the Model and the Complementary Material thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of DeepSeek, and only if You agree to indemnify, defend, and hold DeepSeek harmless for any liability incurred by, or claims asserted against, DeepSeek by reason of your accepting any such warranty or additional liability. 
+### 5. Use-Based Restrictions
 
-13. If any provision of this License is held to be invalid, illegal or unenforceable, the remaining provisions shall be unaffected thereby and remain valid as if such provision had not been set forth herein.
+You may not use the Model or its Derivatives for:
 
-14. Governing Law and Jurisdiction. This agreement will be governed and construed under PRC laws without regard to choice of law principles, and the UN Convention on Contracts for the International Sale of Goods does not apply to this agreement. The courts located in the domicile of Hangzhou DeepSeek Artificial Intelligence Fundamental Technology Research Co., Ltd. shall have exclusive jurisdiction of any dispute arising out of this agreement.
+- Violating laws or infringing third-party rights.
+- Military purposes.
+- Exploiting, harming, or attempting to harm minors.
+- Generating or disseminating false, harmful, or inappropriate content.
+- Unauthorized use of personally identifiable information.
+- Harassment or defamation.
+- Fully automated decision-making that adversely affects individuals' rights.
+- Discrimination or harm based on protected characteristics.
+- Exploiting vulnerabilities of specific groups (e.g., age, mental state).
 
-END OF TERMS AND CONDITIONS
+### 6. The Output You Generate
 
-Attachment A 
+DeepSeek claims no rights to the Output generated by You. However, You are accountable for its use and must comply with the License's provisions.
 
-Use Restrictions
+---
 
-You agree not to use the Model or Derivatives of the Model:
+## Section IV: OTHER PROVISIONS
 
--	In any way that violates any applicable national or international law or regulation or infringes upon the lawful rights and interests of any third party; 
--	For military use in any way;
--	For the purpose of exploiting, harming or attempting to exploit or harm minors in any way; 
--	To generate or disseminate verifiably false information and/or content with the purpose of harming others; 
--	To generate or disseminate inappropriate content subject to applicable regulatory requirements;
--	To generate or disseminate personal identifiable information without due authorization or for unreasonable use; 
--	To defame, disparage or otherwise harass others; 
--	For fully automated decision making that adversely impacts an individual’s legal rights or otherwise creates or modifies a binding, enforceable obligation; 
--	For any use intended to or which has the effect of discriminating against or harming individuals or groups based on online or offline social behavior or known or predicted personal or personality characteristics; 
--	To exploit any of the vulnerabilities of a specific group of persons based on their age, social, physical or mental characteristics, in order to materially distort the behavior of a person pertaining to that group in a manner that causes or is likely to cause that person or another person physical or psychological harm; 
--	For any use intended to or which has the effect of discriminating against individuals or groups based on legally protected characteristics or categories.
+### 7. Updates and Runtime Restrictions
+
+DeepSeek reserves the right to restrict usage of the Model in violation of this License.
+
+### 8. Trademarks and Related
+
+This License does not grant permission to use DeepSeek’s trademarks, logos, or trade names.
+
+### 9. Personal Information, IP Rights, and Related
+
+You must comply with applicable laws when handling personal information or IP-related works in the Model. DeepSeek’s license does not imply a legitimate basis for processing such information.
+
+### 10. Disclaimer of Warranty
+
+The Model and Complementary Material are provided "AS IS" without warranties, including fitness for a particular purpose.
+
+### 11. Limitation of Liability
+
+DeepSeek is not liable for damages arising from the use or inability to use the Model, except as required by law.
+
+### 12. Accepting Warranty or Additional Liability
+
+If You offer warranties or additional liabilities for redistribution, You do so solely at your own risk and responsibility.
+
+### 13. Severability
+
+If any provision is deemed invalid, the rest of the License remains effective.
+
+### 14. Governing Law and Jurisdiction
+
+This License is governed by PRC laws. Disputes are subject to the exclusive jurisdiction of courts in Hangzhou, China.
+
+---
+
+## Attachment A: Use Restrictions
+
+Restricted uses include, but are not limited to:
+
+1. Violating laws or infringing lawful rights.
+2. Military applications.
+3. Exploiting or harming minors.
+4. Disseminating false or harmful content.
+5. Generating unauthorized personal data.
+6. Harassment or discrimination.
+7. Exploiting group vulnerabilities.
+8. Fully automated decision-making that negatively impacts legal rights.
+
+---
+
+**END OF TERMS AND CONDITIONS**
+
