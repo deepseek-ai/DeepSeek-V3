@@ -3,7 +3,7 @@
 ## New Fields in `config.json`
 
 - **model_type**: Specifies the model type, which is updated to `deepseek_v3` in this release.
-- **num_nextn_predict_layers**: Indicates the number of Multi-Token Prediction (MTP) Modules. The open-sourced V3 weights include **1 MTP Module** .
+- **num_nextn_predict_layers**: Indicates the number of Multi-Token Prediction (MTP) Modules. The open-sourced V3 weights include **1 MTP Module**.
 - **quantization_config**: Describes the configuration for FP8 quantization.
 
 ---
@@ -35,7 +35,7 @@ The DeepSeek-V3 weight file consists of two main components: **Main Model Weight
 - **Composition**:
   - Additional MTP Modules defined by the `num_nextn_predict_layers` field. In this model, the value is set to 1.
 - **Parameter Count**:
-  - Parameters: **11.5B unique parameters**, excluding the shared 0.9B Embedding and 0.9B output Head).
+  - Parameters: **11.5B unique parameters**, excluding the shared 0.9B Embedding and 0.9B output Head.
   - Activation parameters: **2.4B** (including the shared 0.9B Embedding and 0.9B output Head).
 
 #### Structural Details
