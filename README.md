@@ -163,8 +163,8 @@ For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md
 
 Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 performs well across all context window lengths up to **128K**. 
 
-### Chat Model
-#### Standard Benchmarks (Models larger than 67B)
+## Chat Model
+### Standard Benchmarks (Models larger than 67B)
 <div align="center">
 
 | | **Benchmark (Metric)** | **DeepSeek V2-0506** | **DeepSeek V2.5-0905** | **Qwen2.5 72B-Inst.** | **Llama3.1 405B-Inst.** | **Claude-3.5-Sonnet-1022** | **GPT-4o 0513** | **DeepSeek V3** |
