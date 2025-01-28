@@ -3,3 +3,4 @@ triton==3.0.0
 transformers==4.46.3
 safetensors==0.4.5
 tqdm==4.67.1
+python==3.10
