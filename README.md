@@ -256,7 +256,7 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 #### System Requirements
 
 > [!NOTE] 
-> Linux with Python 3.10 only. Mac and Windows are not supported.
+> Linux with Python 3.10 only. On macOS use Ollama and Kerlig. Windows is not supported.
 
 Dependencies:
 ```
