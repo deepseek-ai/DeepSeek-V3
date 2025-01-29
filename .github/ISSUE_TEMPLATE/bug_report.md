@@ -1,23 +1,38 @@
----
-name: Bug report
-about: Create a report to help us improve
-title: "[BUG]"
-labels: ''
+# Bug Report
+
+name: Bug Report
+about: Report a bug to help us improve the project
+title: "[BUG] Short Description"
+labels: "bug"
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## 🐞 Bug Description
 
-**To Reproduce**
-Steps to reproduce the behavior.
+A clear and concise description of the issue.
 
-**Expected behavior**
+## ✅ Steps to Reproduce
+
+1. Go to '...'
+2. Click on '...'
+3. Observe the error
+
+## 🎯 Expected Behavior
+
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## 📸 Screenshots (if applicable)
 
-**Additional context**
-Add any other context about the problem here.
+Attach screenshots or screen recordings to illustrate the problem.
+
+## 🛠️ Environment (please complete the following information)
+
+- OS: [e.g., Windows, macOS, Linux]
+- Browser: [e.g., Chrome, Firefox, Edge]
+- Node.js Version: [e.g., 18.x]
+- Other relevant environment details
+
+## 📄 Additional Context
+
+Add any other relevant details, logs, or error messages here.

@@ -23,14 +23,16 @@ def act_quant_kernel(x_ptr, y_ptr, s_ptr, BLOCK_SIZE: tl.constexpr):
     pid = tl.program_id(axis=0)
     offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     x = tl.load(x_ptr + offs).to(tl.float32)
-    s = tl.max(tl.abs(x)) / 448.
+    s = tl.max(tl.abs(x)) / 448.0
     y = x / s
     y = y.to(y_ptr.dtype.element_ty)
     tl.store(y_ptr + offs, y)
     tl.store(s_ptr + pid, s)
 
 
-def act_quant(x: torch.Tensor, block_size: int = 128) -> Tuple[torch.Tensor, torch.Tensor]:
+def act_quant(
+    x: torch.Tensor, block_size: int = 128
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Quantizes the input tensor `x` using block-wise quantization.
 
@@ -42,12 +44,20 @@ def act_quant(x: torch.Tensor, block_size: int = 128) -> Tuple[torch.Tensor, tor
         Tuple[torch.Tensor, torch.Tensor]: A tuple containing:
             - The quantized tensor with dtype `torch.float8_e4m3fn`.
             - A tensor of scaling factors with dtype `torch.float32`.
+
+    Raises:
+        ValueError: If the tensor is not contiguous or the last dimension is not divisible by `block_size`.
     """
-    assert x.is_contiguous()
-    assert x.size(-1) % block_size == 0
+    if not x.is_contiguous():
+        raise ValueError("Input tensor must be contiguous in memory.")
+    if x.size(-1) % block_size != 0:
+        raise ValueError(
+            f"The last dimension of the tensor must be divisible by {block_size}."
+        )
+
     y = torch.empty_like(x, dtype=torch.float8_e4m3fn)
     s = x.new_empty(*x.size()[:-1], x.size(-1) // block_size, dtype=torch.float32)
-    grid = lambda meta: (triton.cdiv(x.numel(), meta['BLOCK_SIZE']), )
+    grid = lambda meta: (triton.cdiv(x.numel(), meta["BLOCK_SIZE"]),)
     act_quant_kernel[grid](x, y, s, BLOCK_SIZE=block_size)
     return y, s
 
@@ -81,7 +91,9 @@ def weight_dequant_kernel(x_ptr, s_ptr, y_ptr, M, N, BLOCK_SIZE: tl.constexpr):
     tl.store(y_ptr + offs, y, mask=mask)
 
 
-def weight_dequant(x: torch.Tensor, s: torch.Tensor, block_size: int = 128) -> torch.Tensor:
+def weight_dequant(
+    x: torch.Tensor, s: torch.Tensor, block_size: int = 128
+) -> torch.Tensor:
     """
     Dequantizes the given weight tensor using the provided scale tensor.
 
@@ -94,30 +106,52 @@ def weight_dequant(x: torch.Tensor, s: torch.Tensor, block_size: int = 128) -> t
         torch.Tensor: The dequantized weight tensor of the same shape as `x`.
 
     Raises:
-        AssertionError: If `x` or `s` are not contiguous or if their dimensions are not 2.
+        ValueError: If `x` or `s` are not contiguous or if their dimensions are not 2.
     """
-    assert x.is_contiguous() and s.is_contiguous()
-    assert x.dim() == 2 and s.dim() == 2
+    if not x.is_contiguous():
+        raise ValueError("Input tensor `x` must be contiguous.")
+    if not s.is_contiguous():
+        raise ValueError("Input tensor `s` must be contiguous.")
+    if x.dim() != 2 or s.dim() != 2:
+        raise ValueError("Both `x` and `s` must be 2D tensors.")
+
     M, N = x.size()
     y = torch.empty_like(x, dtype=torch.get_default_dtype())
-    grid = lambda meta: (triton.cdiv(M, meta['BLOCK_SIZE']), triton.cdiv(N, meta['BLOCK_SIZE']))
+    grid = lambda meta: (
+        triton.cdiv(M, meta["BLOCK_SIZE_M"]),
+        triton.cdiv(N, meta["BLOCK_SIZE_N"]),
+    )
     weight_dequant_kernel[grid](x, s, y, M, N, BLOCK_SIZE=block_size)
     return y
 
 
 fp8_gemm_configs = [
-    Config({'BLOCK_SIZE_M': block_m, 'BLOCK_SIZE_N': block_n, 'BLOCK_SIZE_K': 128}, num_stages=num_stages, num_warps=8)
-    for block_m in [16, 32, 64] for block_n in [32, 64, 128] for num_stages in [3, 4, 5, 6]
+    Config(
+        {"BLOCK_SIZE_M": block_m, "BLOCK_SIZE_N": block_n, "BLOCK_SIZE_K": 128},
+        num_stages=num_stages,
+        num_warps=8,
+    )
+    for block_m in [16, 32, 64]
+    for block_n in [32, 64, 128]
+    for num_stages in [3, 4, 5, 6]
 ]
 
-@triton.autotune(configs=fp8_gemm_configs, key=['N', 'K'])
+
+@triton.autotune(configs=fp8_gemm_configs, key=["N", "K"])
 @triton.jit
-def fp8_gemm_kernel(a_ptr, b_ptr, c_ptr,
-                    a_s_ptr, b_s_ptr,
-                    M, N: tl.constexpr, K: tl.constexpr,
-                    BLOCK_SIZE_M: tl.constexpr,
-                    BLOCK_SIZE_N: tl.constexpr,
-                    BLOCK_SIZE_K: tl.constexpr):
+def fp8_gemm_kernel(
+    a_ptr,
+    b_ptr,
+    c_ptr,
+    a_s_ptr,
+    b_s_ptr,
+    M,
+    N: tl.constexpr,
+    K: tl.constexpr,
+    BLOCK_SIZE_M: tl.constexpr,
+    BLOCK_SIZE_N: tl.constexpr,
+    BLOCK_SIZE_K: tl.constexpr,
+):
     """
     Performs a matrix multiplication operation on FP8 matrices with scaling factors.
 
@@ -173,19 +207,35 @@ def fp8_gemm(a: torch.Tensor, a_s: torch.Tensor, b: torch.Tensor, b_s: torch.Ten
 
     Args:
         a (torch.Tensor): The first input matrix, must be contiguous.
-        a_s (torch.Tensor): The scaling factor for the first input matrix, must be contiguous.
+        a_s (torch.Tensor): The scaling factors for matrix `a`.
         b (torch.Tensor): The second input matrix, must be contiguous.
-        b_s (torch.Tensor): The scaling factor for the second input matrix, must be contiguous.
+        b_s (torch.Tensor): The scaling factors for matrix `b`.
 
     Returns:
-        torch.Tensor: The result of the matrix multiplication.
+        torch.Tensor: The resulting matrix after multiplication.
+
+    Raises:
+        ValueError: If `a`, `b`, `a_s`, or `b_s` are not contiguous.
     """
-    assert a.is_contiguous() and b.is_contiguous()
-    assert a_s.is_contiguous() and b_s.is_contiguous()
-    K = a.size(-1)
-    M = a.numel() // K
-    N = b.size(0)
-    c = a.new_empty(*a.size()[:-1], N, dtype=torch.get_default_dtype())
-    grid = lambda META: (triton.cdiv(M, META['BLOCK_SIZE_M']), triton.cdiv(N, META['BLOCK_SIZE_N']))
-    fp8_gemm_kernel[grid](a, b, c, a_s, b_s, M, N, K)
+    if not a.is_contiguous():
+        raise ValueError("Matrix `a` must be contiguous.")
+    if not b.is_contiguous():
+        raise ValueError("Matrix `b` must be contiguous.")
+    if not a_s.is_contiguous():
+        raise ValueError("Scaling factors `a_s` must be contiguous.")
+    if not b_s.is_contiguous():
+        raise ValueError("Scaling factors `b_s` must be contiguous.")
+
+    M, K = a.size()
+    K_, N = b.size()
+    assert K == K_, "Matrix dimensions do not match for multiplication."
+
+    c = torch.empty((M, N), dtype=torch.float32)
+    grid = lambda meta: (
+        triton.cdiv(M, meta["BLOCK_SIZE_M"]),
+        triton.cdiv(N, meta["BLOCK_SIZE_N"]),
+    )
+    fp8_gemm_kernel[grid](
+        a, b, c, a_s, b_s, M, N, K, BLOCK_SIZE_M=128, BLOCK_SIZE_N=128, BLOCK_SIZE_K=128
+    )
     return c

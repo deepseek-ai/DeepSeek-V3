@@ -20,7 +20,7 @@ The DeepSeek-V3 weight file consists of two main components: **Main Model Weight
   - Total parameters: **671B**
   - Activation parameters: **36.7B** (including 0.9B for Embedding and 0.9B for the output Head).
 
-#### Structural Details
+#### Main Model Structural Details
 
 - **Embedding Layer**:
   - `model.embed_tokens.weight`
