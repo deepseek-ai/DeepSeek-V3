@@ -249,7 +249,7 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 ```
 
 > [!NOTE]
-> Hugging Face's Transformers has not been directly supported yet.**
+> Hugging Face's Transformers has not been directly supported yet.
 
 ### 6.1 Inference with DeepSeek-Infer Demo (example only)
 
