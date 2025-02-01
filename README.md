@@ -357,3 +357,11 @@ This code repository is licensed under [the MIT License](LICENSE-CODE). The use 
 
 ## 9. Contact
 If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).
+
+## 10. Donate
+If you want to contribute and support the development of this project, you can donate to the following wallet address:
+
+**Crypto Wallet Address (Ethereum / USDT - ERC20 / USDT - TRC20):**  
+`0x2fAf0d125e3719808E7051B26cd6606f20d89F36`
+
+Your contributions will be used to enhance the project, maintain development, and grow the community. Every donation, no matter how small, is greatly appreciated.
