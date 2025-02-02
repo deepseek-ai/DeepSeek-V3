@@ -72,7 +72,6 @@ def main(hf_ckpt_path, save_path, n_experts, mp):
     torch.set_num_threads(8)
     n_local_experts = n_experts // mp
     state_dicts = [{} for _ in range(mp)]
-    tasks = []
     tensor_dir = glob(os.path.join(hf_ckpt_path, "*.safetensors"))
     token_dir = glob(os.path.join(hf_ckpt_path, "*token*"))
     for file_path in tqdm(tensor_dir):
