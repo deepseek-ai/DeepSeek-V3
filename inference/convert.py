@@ -73,7 +73,9 @@ def main(hf_ckpt_path, save_path, n_experts, mp):
     n_local_experts = n_experts // mp
     state_dicts = [{} for _ in range(mp)]
     tasks = []
-    for file_path in tqdm(glob(os.path.join(hf_ckpt_path, "*.safetensors"))):
+    tensor_dir = glob(os.path.join(hf_ckpt_path, "*.safetensors"))
+    token_dir = glob(os.path.join(hf_ckpt_path, "*token*"))
+    for file_path in tqdm(tensor_dir):
         cm = await sync.to_thread(safe_open, file_path, framework="pt", device="cpu")
         async with cm as f:
             await sync.gather(*(inner_safe_open(name, f, state_dicts, mp, n_local_experts) for name in f.keys()))
@@ -85,7 +87,7 @@ def main(hf_ckpt_path, save_path, n_experts, mp):
     async def set_file_path(file_path):
         await sync.to_thread(shutil.copyfile, file_path, os.path.join(save_path, os.path.basename(file_path)))
     
-    await sync.gather(*(set_file_path(file_path) for file_path in glob(os.path.join(hf_ckpt_path, "*token*"))))
+    await sync.gather(*(set_file_path(file_path) for file_path in token_dir))
 
 
 
