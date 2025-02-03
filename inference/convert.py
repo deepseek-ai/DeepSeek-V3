@@ -1,9 +1,9 @@
 import os
 import shutil
-from argparse import ArgumentParser
+from parser import Parser
 from glob import glob
 from tqdm import tqdm, trange
-
+import asyncio as sync 
 import torch
 from safetensors.torch import safe_open, save_file
 
@@ -29,6 +29,32 @@ mapping = {
     "scale": ("scale", None),
 }
 
+async def set_param(param, name, i, n_local_experts, mp, state_dicts, dim):
+    new_param = param
+    if "experts" in name and "shared_experts" not in name:
+        idx = int(name.split(".")[-3])
+        if idx < i * n_local_experts or idx >= (i + 1) * n_local_experts:
+            return
+    elif dim is not None:
+        assert param.size(dim) % mp == 0
+        shard_size = param.size(dim) // mp
+        new_param = param.narrow(dim, i * shard_size, shard_size).contiguous()
+    state_dicts[i][name] = new_param
+async def inner_safe_open(name, f, state_dicts, mp, n_local_experts): 
+        if "model.layers.61" not in name:
+            param: torch.Tensor = f.get_tensor(name)
+            if name.startswith("model."):
+                name = name[len("model."):]
+            name = name.replace("self_attn", "attn")
+            name = name.replace("mlp", "ffn")
+            name = name.replace("weight_scale_inv", "scale")
+            name = name.replace("e_score_correction_bias", "bias")
+            key = name.split(".")[-2]
+            assert key in mapping
+            new_key, dim = mapping[key]
+            name = name.replace(key, new_key)
+            await sync.gather(*(set_param(param, name, i, n_local_experts, mp, state_dicts, dim) for i in range(mp)))
+                
 
 def main(hf_ckpt_path, save_path, n_experts, mp):
     """
@@ -44,53 +70,30 @@ def main(hf_ckpt_path, save_path, n_experts, mp):
         None
     """
     torch.set_num_threads(8)
-    n_local_experts = n_experts // mp
-    state_dicts = [{} for _ in range(mp)]
-
-    for file_path in tqdm(glob(os.path.join(hf_ckpt_path, "*.safetensors"))):
-        with safe_open(file_path, framework="pt", device="cpu") as f:
-            for name in f.keys():
-                if "model.layers.61" in name:
-                    continue
-                param: torch.Tensor = f.get_tensor(name)
-                if name.startswith("model."):
-                    name = name[len("model."):]
-                name = name.replace("self_attn", "attn")
-                name = name.replace("mlp", "ffn")
-                name = name.replace("weight_scale_inv", "scale")
-                name = name.replace("e_score_correction_bias", "bias")
-                key = name.split(".")[-2]
-                assert key in mapping
-                new_key, dim = mapping[key]
-                name = name.replace(key, new_key)
-                for i in range(mp):
-                    new_param = param
-                    if "experts" in name and "shared_experts" not in name:
-                        idx = int(name.split(".")[-3])
-                        if idx < i * n_local_experts or idx >= (i + 1) * n_local_experts:
-                            continue
-                    elif dim is not None:
-                        assert param.size(dim) % mp == 0
-                        shard_size = param.size(dim) // mp
-                        new_param = param.narrow(dim, i * shard_size, shard_size).contiguous()
-                    state_dicts[i][name] = new_param
+    n_local_experts,state_dicts = n_experts // mp, [{} for _ in range(mp)]
+    tensor_dir, token_dir = list(glob(os.path.join(hf_ckpt_path, "*.safetensors"))),list(glob(os.path.join(hf_ckpt_path, "*token*")))
+    for file_path in tqdm(tensor_dir):
+        cm = await sync.to_thread(safe_open, file_path, framework="pt", device="cpu")
+        async with cm as f:
+            await sync.gather(*(inner_safe_open(name, f, state_dicts, mp, n_local_experts) for name in f.keys()))
 
     os.makedirs(save_path, exist_ok=True)
 
-    for i in trange(mp):
-        save_file(state_dicts[i], os.path.join(save_path, f"model{i}-mp{mp}.safetensors"))
+    await sync.gather(*(sync.to_thread(save_file(state_dicts[i], os.path.join(save_path, f"model{i}-mp{mp}.safetensors"))) for i in trange(mp)))
 
-    for file_path in glob(os.path.join(hf_ckpt_path, "*token*")):
-        new_file_path = os.path.join(save_path, os.path.basename(file_path))
-        shutil.copyfile(file_path, new_file_path)
+    async def set_file_path(file_path):
+        await sync.to_thread(shutil.copyfile, file_path, os.path.join(save_path, os.path.basename(file_path)))
+    
+    await sync.gather(*(set_file_path(file_path) for file_path in token_dir))
+
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("--hf-ckpt-path", type=str, required=True)
-    parser.add_argument("--save-path", type=str, required=True)
-    parser.add_argument("--n-experts", type=int, required=True)
-    parser.add_argument("--model-parallel", type=int, required=True)
-    args = parser.parse_args()
-    assert args.n_experts % args.model_parallel == 0
-    main(args.hf_ckpt_path, args.save_path, args.n_experts, args.model_parallel)
+    arg_list = [
+        ("--hf-ckpt-path", type:=str, required:=True),
+        ("--save-path", type:=str, required:=True),
+        ("--n-experts", type:=int, required:=True),
+        ("--model-parallel", type:=int, required:=True)
+    ]
+    args = Parser(arg_list).apply_args().assert_model_parallel().return_args()
+    sync.run(main(args.hf_ckpt_path, args.save_path, args.n_experts, args.model_parallel))
