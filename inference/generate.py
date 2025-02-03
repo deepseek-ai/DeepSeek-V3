@@ -168,7 +168,7 @@ if __name__ == "__main__":
     Raises:
         AssertionError: If neither input-file nor interactive mode is specified.
     """
-    arg_variables = [   
+    arg_list = [   
         ("--ckpt-path", type:=str, required:=True),
         ("--config", type:=str, required:=True),
         ("--input-file", type:=str, default:=""),
@@ -176,6 +176,6 @@ if __name__ == "__main__":
         ("--max-new-tokens", type:=int, default:=200),
         ("--temperature", type:=float, default:=0.2)
     ]
-    args = Parser(arg_list=arg_variables).apply_args().return_args()
+    args = Parser(arg_list).apply_args().return_args()
     assert args.input_file or args.interactive
     run(main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature))

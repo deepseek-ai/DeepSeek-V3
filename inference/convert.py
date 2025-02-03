@@ -1,6 +1,6 @@
 import os
 import shutil
-from argparse import ArgumentParser
+from parser import Parser
 from glob import glob
 from tqdm import tqdm, trange
 import asyncio as sync 
@@ -89,11 +89,12 @@ def main(hf_ckpt_path, save_path, n_experts, mp):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("--hf-ckpt-path", type=str, required=True)
-    parser.add_argument("--save-path", type=str, required=True)
-    parser.add_argument("--n-experts", type=int, required=True)
-    parser.add_argument("--model-parallel", type=int, required=True)
-    args = parser.parse_args()
+    arg_list = [
+        ("--hf-ckpt-path", type:=str, required:=True),
+        ("--save-path", type:=str, required:=True),
+        ("--n-experts", type:=int, required:=True),
+        ("--model-parallel", type:=int, required:=True)
+    ]
+    args = Parser(arg_list).apply_args().return_args()
     assert args.n_experts % args.model_parallel == 0
     sync.run(main(args.hf_ckpt_path, args.save_path, args.n_experts, args.model_parallel))

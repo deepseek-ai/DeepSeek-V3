@@ -6,7 +6,6 @@ from tqdm import tqdm
 from asyncio import gather, to_thread, run
 import torch
 from safetensors.torch import load_file, save_file
-
 from kernel import weight_dequant
 
 def inner_tensor_file(safetensor_file):
@@ -61,8 +60,7 @@ async def main(fp8_path, bf16_path):
     torch.set_default_dtype(torch.bfloat16)
     os.makedirs(bf16_path, exist_ok=True)
     model_index_file = os.path.join(fp8_path, "model.safetensors.index.json")
-    with open(model_index_file, "r") as f:
-        model_index = json.load(f)
+    with open(model_index_file, "r") as f: model_index = json.load(f)
     weight_map = model_index["weight_map"]
     
     # Cache for loaded safetensor files
