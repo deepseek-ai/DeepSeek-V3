@@ -47,14 +47,14 @@
 
 ## 1. Introduction
 
-We present DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters with 37B activated for each token. 
-To achieve efficient inference and cost-effective training, DeepSeek-V3 adopts Multi-head Latent Attention (MLA) and DeepSeekMoE architectures, which were thoroughly validated in DeepSeek-V2. 
-Furthermore, DeepSeek-V3 pioneers an auxiliary-loss-free strategy for load balancing and sets a multi-token prediction training objective for stronger performance. 
+We present DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters, 37B of which are activated for each token. 
+To achieve efficient inference and cost-effective training, DeepSeek-V3 adopts Multi-Head Latent Attention (MLA) and DeepSeekMoE architectures, which were thoroughly validated in DeepSeek-V2. 
+Furthermore, DeepSeek-V3 introduces an auxiliary loss-free strategy for load balancing and sets a multi-token prediction training objective for stronger performance. 
 We pre-train DeepSeek-V3 on 14.8 trillion diverse and high-quality tokens, followed by Supervised Fine-Tuning and Reinforcement Learning stages to fully harness its capabilities. 
 Comprehensive evaluations reveal that DeepSeek-V3 outperforms other open-source models and achieves performance comparable to leading closed-source models.
-Despite its excellent performance, DeepSeek-V3 requires only 2.788M H800 GPU hours for its full training.
+Despite its excellent performance, DeepSeek-V3 requires only 2.788M H800 GPU hours to complete training.
 In addition, its training process is remarkably stable. 
-Throughout the entire training process, we did not experience any irrecoverable loss spikes or perform any rollbacks. 
+Throughout the entire training process, we did not experience any irreversible loss spikes or perform any rollbacks. 
 <p align="center">
   <img width="80%" src="figures/benchmark.png">
 </p>
@@ -65,7 +65,7 @@ Throughout the entire training process, we did not experience any irrecoverable 
 
 **Architecture: Innovative Load Balancing Strategy and Training Objective**
 
-- On top of the efficient architecture of DeepSeek-V2, we pioneer an auxiliary-loss-free strategy for load balancing, which minimizes the performance degradation that arises from encouraging load balancing.
+- On top of the efficient architecture of DeepSeek-V2, we pioneer an auxiliary loss-free strategy for load balancing, which minimizes the performance degradation that arises from ensuring load balancing.
 -  We investigate a Multi-Token Prediction (MTP) objective and prove it beneficial to model performance. 
     It can also be used for speculative decoding for inference acceleration. 
 
@@ -80,9 +80,9 @@ Throughout the entire training process, we did not experience any irrecoverable 
 
 ---
 
-**Post-Training: Knowledge Distillation from DeepSeek-R1**
+**Post-Training: Knowledge Distilling from DeepSeek-R1**
 
--   We introduce an innovative methodology to distill reasoning capabilities from the long-Chain-of-Thought (CoT) model, specifically from one of the DeepSeek R1 series models, into standard LLMs, particularly DeepSeek-V3. Our pipeline elegantly incorporates the verification and reflection patterns of R1 into DeepSeek-V3 and notably improves its reasoning performance. Meanwhile, we also maintain a control over the output style and length of DeepSeek-V3.
+-   We introduce an innovative methodology to distill reasoning capabilities from the long-Chain-of-Thought (CoT) model, specifically from one of the DeepSeek R1 series models, into standard LLMs, particularly DeepSeek-V3. Our pipeline elegantly incorporates the verification and reflection patterns of R1 into DeepSeek-V3 and significantly improves its reasoning performance. Meanwhile, we also maintain a control over the output style and length of DeepSeek-V3.
 
 ---
 
@@ -99,7 +99,8 @@ Throughout the entire training process, we did not experience any irrecoverable 
 </div>
 
 > [!NOTE]
-> The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights.**
+> The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights
+> **
 
 To ensure optimal performance and flexibility, we have partnered with open-source communities and hardware vendors to provide multiple ways to run the model locally. For step-by-step guidance, check out Section 6: [How_to Run_Locally](#6-how-to-run-locally).
 
