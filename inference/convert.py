@@ -95,6 +95,5 @@ if __name__ == "__main__":
         ("--n-experts", type:=int, required:=True),
         ("--model-parallel", type:=int, required:=True)
     ]
-    args = Parser(arg_list).apply_args().return_args()
-    assert args.n_experts % args.model_parallel == 0
+    args = Parser(arg_list).apply_args().assert_model_parallel().return_args()
     sync.run(main(args.hf_ckpt_path, args.save_path, args.n_experts, args.model_parallel))

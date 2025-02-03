@@ -176,6 +176,5 @@ if __name__ == "__main__":
         ("--max-new-tokens", type:=int, default:=200),
         ("--temperature", type:=float, default:=0.2)
     ]
-    args = Parser(arg_list).apply_args().return_args()
-    assert args.input_file or args.interactive
+    args = Parser(arg_list).apply_args().assert_interactive().return_args()
     run(main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature))
