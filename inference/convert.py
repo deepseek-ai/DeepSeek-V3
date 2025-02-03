@@ -70,10 +70,8 @@ def main(hf_ckpt_path, save_path, n_experts, mp):
         None
     """
     torch.set_num_threads(8)
-    n_local_experts = n_experts // mp
-    state_dicts = [{} for _ in range(mp)]
-    tensor_dir = glob(os.path.join(hf_ckpt_path, "*.safetensors"))
-    token_dir = glob(os.path.join(hf_ckpt_path, "*token*"))
+    n_local_experts,state_dicts = n_experts // mp, [{} for _ in range(mp)]
+    tensor_dir, token_dir = list(glob(os.path.join(hf_ckpt_path, "*.safetensors"))),list(glob(os.path.join(hf_ckpt_path, "*token*")))
     for file_path in tqdm(tensor_dir):
         cm = await sync.to_thread(safe_open, file_path, framework="pt", device="cpu")
         async with cm as f:

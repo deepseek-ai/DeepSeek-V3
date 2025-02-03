@@ -1,13 +1,13 @@
 import os
 import json
+from parser import Parser
 from argparse import ArgumentParser
 from typing import List
-
 import torch
 import torch.distributed as dist
 from transformers import AutoTokenizer
 from safetensors.torch import load_model
-
+from asyncio import gather, to_thread, run
 from model import Transformer, ModelArgs
 
 
@@ -36,6 +36,7 @@ def generate(
     temperature: float = 1.0
 ) -> List[List[int]]:
     """
+    
     Generates new tokens based on the given prompt tokens using the specified model.
 
     Args:
@@ -47,38 +48,35 @@ def generate(
 
     Returns:
         List[List[int]]: A list of lists containing the generated tokens for each sequence.
+        
     """
     prompt_lens = [len(t) for t in prompt_tokens]
     assert max(prompt_lens) <= model.max_seq_len
     total_len = min(model.max_seq_len, max_new_tokens + max(prompt_lens))
     tokens = torch.full((len(prompt_tokens), total_len), -1, dtype=torch.long, device="cuda")
-    for i, t in enumerate(prompt_tokens):
-        tokens[i, :len(t)] = torch.tensor(t, dtype=torch.long, device="cuda")
+    for i, t in enumerate(prompt_tokens): tokens[i, :len(t)] = torch.tensor(t, dtype=torch.long, device="cuda")
     prev_pos = 0
     finished = torch.tensor([False] * len(prompt_tokens), device="cuda")
     prompt_mask = tokens != -1
-    for cur_pos in range(min(prompt_lens), total_len):
+    def inner_cur_pos():
         logits = model.forward(tokens[:, prev_pos:cur_pos], prev_pos)
-        if temperature > 0:
-            next_token = sample(logits, temperature)
-        else:
-            next_token = logits.argmax(dim=-1)
+        if temperature > 0: next_token = sample(logits, temperature)
+        else: next_token = logits.argmax(dim=-1)
         next_token = torch.where(prompt_mask[:, cur_pos], tokens[:, cur_pos], next_token)
         tokens[:, cur_pos] = next_token
         finished |= torch.logical_and(~prompt_mask[:, cur_pos], next_token == eos_id)
         prev_pos = cur_pos
-        if finished.all():
-            break
+        if finished.all(): return
+    gather(*(to_thread(cur_pos) for cur_pos in range(min(prompt_lens), total_len)))
     completion_tokens = []
     for i, toks in enumerate(tokens.tolist()):
         toks = toks[prompt_lens[i]:prompt_lens[i]+max_new_tokens]
-        if eos_id in toks:
-            toks = toks[:toks.index(eos_id)]
+        if eos_id in toks: toks = toks[:toks.index(eos_id)]
         completion_tokens.append(toks)
     return completion_tokens
 
 
-def main(
+async def main(
     ckpt_path: str,
     config: str,
     input_file: str = "",
@@ -131,8 +129,7 @@ def main(
                 objects = [None]
                 dist.broadcast_object_list(objects, 0)
                 prompt = objects[0]
-            if prompt == "/exit":
-                break
+            if prompt == "/exit": break
             elif prompt == "/clear":
                 messages.clear()
                 continue
@@ -143,8 +140,7 @@ def main(
             print(completion)
             messages.append({"role": "assistant", "content": completion})
     else:
-        with open(input_file) as f:
-            prompts = [line.strip() for line in f.readlines()]
+        with open(input_file) as f: prompts = [line.strip() for line in f.readlines()]
         assert len(prompts) <= args.max_batch_size
         prompt_tokens = [tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True) for prompt in prompts]
         completion_tokens = generate(model, prompt_tokens, max_new_tokens, tokenizer.eos_token_id, temperature)
@@ -154,8 +150,7 @@ def main(
             print("Completion:", completion)
             print()
 
-    if world_size > 1:
-        dist.destroy_process_group()
+    if world_size > 1: dist.destroy_process_group()
 
 
 if __name__ == "__main__":
@@ -173,13 +168,14 @@ if __name__ == "__main__":
     Raises:
         AssertionError: If neither input-file nor interactive mode is specified.
     """
-    parser = ArgumentParser()
-    parser.add_argument("--ckpt-path", type=str, required=True)
-    parser.add_argument("--config", type=str, required=True)
-    parser.add_argument("--input-file", type=str, default="")
-    parser.add_argument("--interactive", action="store_true")
-    parser.add_argument("--max-new-tokens", type=int, default=200)
-    parser.add_argument("--temperature", type=float, default=0.2)
-    args = parser.parse_args()
+    arg_variables = [   
+        ("--ckpt-path", type:=str, required:=True),
+        ("--config", type:=str, required:=True),
+        ("--input-file", type:=str, default:=""),
+        ("--interactive", action:="store_true"),
+        ("--max-new-tokens", type:=int, default:=200),
+        ("--temperature", type:=float, default:=0.2)
+    ]
+    args = Parser(arg_list=arg_variables).apply_args().return_args()
     assert args.input_file or args.interactive
-    main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature)
+    run(main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature))
