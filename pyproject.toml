@@ -1,0 +1,18 @@
+#:schema https://json.schemastore.org/pyproject.json
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multi_node_test"
+requires-python = ">=3.12,<3.13"
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#static-vs-dynamic-metadata
+dynamic = ["version"]
+dependencies = [
+    "numpy>=2.2.2",
+    "torch>=2.4.1",
+]
+
+
+[tool.setuptools]
+packages = ["multi_node_test"]
