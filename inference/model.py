@@ -50,6 +50,7 @@ class ModelArgs:
         beta_fast (int): Fast beta correction factor.
         beta_slow (int): Slow beta correction factor.
         mscale (float): Scaling factor for extended attention.
+        gate_bias_dim: Optional[int] = 7168  # Dimension threshold that determines if gate bias is used
     """
     max_batch_size: int = 8
     max_seq_len: int = 4096 * 4
