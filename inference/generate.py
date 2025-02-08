@@ -59,7 +59,8 @@ class TextGenerator:
             List[List[int]]: Generated tokens for each sequence.
         """
         prompt_lens = [len(t) for t in prompt_tokens]
-        assert max(prompt_lens) <= self.model.max_seq_len
+        if max(prompt_lens) > self.model.max_seq_len:
+            raise ValueError(f"Prompt length exceeds model maximum sequence length (max_seq_len={self.model.max_seq_len})")
         
         total_len = min(self.model.max_seq_len, config.max_new_tokens + max(prompt_lens))
         tokens = self._initialize_tokens(prompt_tokens, total_len)
@@ -193,7 +194,9 @@ class ChatSession:
     def run_batch(self, input_file: str):
         with open(input_file) as f:
             prompts = [line.strip() for line in f.readlines()]
-        assert len(prompts) <= self.generator.model.args.max_batch_size
+        
+        if len(prompts) > self.generator.model.args.max_batch_size:
+            raise ValueError(f"Number of prompts exceeds maximum batch size ({self.generator.model.args.max_batch_size})")
 
         completions = self._process_batch(prompts)
         for prompt, completion in zip(prompts, completions):
@@ -302,7 +305,9 @@ if __name__ == "__main__":
     parser.add_argument("--temperature", type=float, default=0.2)
     args = parser.parse_args()
     
-    assert args.input_file or args.interactive
+    if not args.input_file and not args.interactive:
+        raise ValueError("Either input-file or interactive mode must be specified")
+        
     main(
         args.ckpt_path,
         args.config,

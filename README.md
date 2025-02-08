@@ -44,6 +44,18 @@
   <a href="DeepSeek_V3.pdf"><b>Paper Link</b>👁️</a>
 </p>
 
+## Table of Contents
+
+1. [Introduction](#1-introduction)
+2. [Model Summary](#2-model-summary)
+3. [Model Downloads](#3-model-downloads)
+4. [Evaluation Results](#4-evaluation-results)
+5. [Chat Website & API Platform](#5-chat-website--api-platform)
+6. [How to Run Locally](#6-how-to-run-locally)
+7. [License](#7-license)
+8. [Citation](#8-citation)
+9. [Contact](#9-contact)
+
 
 ## 1. Introduction
 
@@ -99,7 +111,7 @@ Throughout the entire training process, we did not experience any irrecoverable 
 </div>
 
 > [!NOTE]
-> The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights.**
+> The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights.
 
 To ensure optimal performance and flexibility, we have partnered with open-source communities and hardware vendors to provide multiple ways to run the model locally. For step-by-step guidance, check out Section 6: [How_to Run_Locally](#6-how-to-run-locally).
 
@@ -130,7 +142,7 @@ For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md
 | | WinoGrande (Acc.) | 5-shot | **86.3** | 82.3 | 85.2 | 84.9 |
 | | RACE-Middle (Acc.) | 5-shot | 73.1 | 68.1 | **74.2** | 67.1 |
 | | RACE-High (Acc.) | 5-shot | 52.6 | 50.3 | **56.8** | 51.3 |
-| | TriviaQA (EM) | 5-shot | 80.0 | 71.9 | **82.7** | **82.9** |
+| | TriviaQA (EM) | 5-shot | 80.0 | 71.9 | 82.7 | **82.9** |
 | | NaturalQuestions (EM) | 5-shot | 38.6 | 33.2 | **41.5** | 40.0 |
 | | AGIEval (Acc.) | 0-shot | 57.5 | 75.8 | 60.6 | **79.6** |
 | Code | HumanEval (Pass@1) | 0-shot | 43.3 | 53.0 | 54.9 | **65.2** |
@@ -249,7 +261,7 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 ```
 
 > [!NOTE]
-> Hugging Face's Transformers has not been directly supported yet.**
+> Hugging Face's Transformers has not been directly supported yet.
 
 ### 6.1 Inference with DeepSeek-Infer Demo (example only)
 
@@ -259,7 +271,7 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 > Linux with Python 3.10 only. Mac and Windows are not supported.
 
 Dependencies:
-```
+```pip-requirements
 torch==2.4.1
 triton==3.0.0
 transformers==4.46.3
