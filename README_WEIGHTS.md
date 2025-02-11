@@ -1,69 +1,69 @@
-# DeepSeek-V3 Weight File Documentation
+# DeepSeek-V3 Ağırlık Dosyası Dokümantasyonu
 
-## New Fields in `config.json`
+## `config.json` İçindeki Yeni Alanlar
 
-- **model_type**: Specifies the model type, which is updated to `deepseek_v3` in this release.
-- **num_nextn_predict_layers**: Indicates the number of Multi-Token Prediction (MTP) Modules. The open-sourced V3 weights include **1 MTP Module** .
-- **quantization_config**: Describes the configuration for FP8 quantization.
+- **model_type**: Model türünü belirtir, bu sürümde `deepseek_v3` olarak güncellenmiştir.
+- **num_nextn_predict_layers**: Çoklu Token Tahmin (MTP) Modüllerinin sayısını belirtir. Açık kaynaklı V3 ağırlıkları **1 MTP Modülü** içerir.
+- **quantization_config**: FP8 kuantizasyonu için yapılandırmayı tanımlar.
 
 ---
 
-## Weight Structure Overview
+## Ağırlık Yapısı Genel Bakış
 
-The DeepSeek-V3 weight file consists of two main components: **Main Model Weights** and **MTP Modules**.
+DeepSeek-V3 ağırlık dosyası iki ana bileşenden oluşur: **Ana Model Ağırlıkları** ve **MTP Modülleri**.
 
-### 1. Main Model Weights
+### 1. Ana Model Ağırlıkları
 
-- **Composition**:
-  - Input/output embedding layers and a complete set of 61 Transformer hidden layers.
-- **Parameter Count**:
-  - Total parameters: **671B**
-  - Activation parameters: **36.7B** (including 0.9B for Embedding and 0.9B for the output Head).
+- **Bileşenler**:
+  - Giriş/çıkış gömme katmanları ve toplam 61 Transformer gizli katmanı.
+- **Parametre Sayısı**:
+  - Toplam parametreler: **671B**
+  - Aktivasyon parametreleri: **36.7B** (0.9B Gömme ve 0.9B Çıkış Kafası dahil).
 
-#### Structural Details
+#### Yapısal Detaylar
 
-- **Embedding Layer**:
+- **Gömme Katmanı**:
   - `model.embed_tokens.weight`
-- **Transformer Hidden Layers**:
-  - `model.layers.0` to `model.layers.60`, totaling `num_hidden_layers` layers.
-- **Output Layer**:
+- **Transformer Gizli Katmanları**:
+  - `model.layers.0` - `model.layers.60`, toplamda `num_hidden_layers` katman.
+- **Çıkış Katmanı**:
   - `model.norm.weight`
   - `lm_head.weight`
 
-### 2. Multi-Token Prediction (MTP) Modules
+### 2. Çoklu Token Tahmin (MTP) Modülleri
 
-- **Composition**:
-  - Additional MTP Modules defined by the `num_nextn_predict_layers` field. In this model, the value is set to 1.
-- **Parameter Count**:
-  - Parameters: **11.5B unique parameters**, excluding the shared 0.9B Embedding and 0.9B output Head).
-  - Activation parameters: **2.4B** (including the shared 0.9B Embedding and 0.9B output Head).
+- **Bileşenler**:
+  - `num_nextn_predict_layers` alanı tarafından tanımlanan ek MTP Modülleri. Bu modelde değer **1** olarak ayarlanmıştır.
+- **Parametre Sayısı**:
+  - **11.5B benzersiz parametre**, (paylaşılan 0.9B Gömme ve 0.9B Çıkış Kafası hariç).
+  - Aktivasyon parametreleri: **2.4B** (paylaşılan 0.9B Gömme ve 0.9B Çıkış Kafası dahil).
 
-#### Structural Details
+#### Yapısal Detaylar
 
-- **embed_tokens**: **Shares parameters** with the Embedding layer of the Main Model weights.
-- **enorm & hnorm**: RMSNorm parameters required for speculative decoding.
-- **eh_proj**: Parameters for dimensionality reduction projection on the norm results.
-- **Additional Transformer Hidden Layer**:
-  - `model.layers.61.self_attn & mlp` (structure identical to the Main Model hidden layers).
-- **shared_head**: **Shares parameters** with the output Head of the Main Model weights.
-
----
-
-### Loading Rules
-
-- **Main Model Weights**: Loaded via the `num_hidden_layers` parameter in `config.json`.
-- **MTP Modules**: Loaded via the `num_nextn_predict_layers` parameter, with layer IDs appended immediately after the Main Model hidden layers. For example:
-  - If `num_hidden_layers = 61` and `num_nextn_predict_layers = 1`, the MTP Module's layer ID is `61`.
+- **embed_tokens**: **Ana Model ağırlıklarının Gömme katmanı ile parametreleri paylaşır**.
+- **enorm & hnorm**: Spekülatif kod çözme için gerekli olan RMSNorm parametreleri.
+- **eh_proj**: Norm sonuçları üzerinde boyut indirgeme projeksiyon parametreleri.
+- **Ek Transformer Gizli Katmanı**:
+  - `model.layers.61.self_attn & mlp` (Ana Model gizli katmanlarıyla aynı yapıdadır).
+- **shared_head**: **Ana Model ağırlıklarının Çıkış Kafası ile parametreleri paylaşır**.
 
 ---
 
-## FP8 Weight Documentation
+### Yükleme Kuralları
 
-DeepSeek-V3 natively supports FP8 weight format with 128x128 block scaling.
+- **Ana Model Ağırlıkları**: `config.json` içindeki `num_hidden_layers` parametresi kullanılarak yüklenir.
+- **MTP Modülleri**: `num_nextn_predict_layers` parametresi ile yüklenir ve katman kimlikleri Ana Model gizli katmanlarından hemen sonra eklenir. Örneğin:
+  - Eğer `num_hidden_layers = 61` ve `num_nextn_predict_layers = 1` ise, MTP Modülünün katman kimliği `61` olur.
 
-### FP8 Configuration
+---
 
-The FP8 weight file introduces a `quantization_config` field to describe the quantization method. Below is an example configuration:
+## FP8 Ağırlık Dokümantasyonu
+
+DeepSeek-V3, 128x128 blok ölçeklendirmesiyle FP8 ağırlık formatını yerel olarak destekler.
+
+### FP8 Yapılandırması
+
+FP8 ağırlık dosyası, kuantizasyon yöntemini tanımlayan bir `quantization_config` alanı içerir. Örnek yapılandırma aşağıda verilmiştir:
 
 ```json
 "quantization_config": {
@@ -74,21 +74,24 @@ The FP8 weight file introduces a `quantization_config` field to describe the qua
 }
 ```
 
-- **Quantization Format**:
-  - Format type: `fp8` and `e4m3` (corresponding to `torch.float8_e4m3fn`).
-  - Weight block size: `128x128`.
-- **Activation Quantization Scheme**:
-  - Utilizes dynamic activation quantization (`dynamic`).
+- **Kuantizasyon Formatı**:
+  - Format türü: `fp8` ve `e4m3` (karşılığı `torch.float8_e4m3fn`).
+  - Ağırlık blok boyutu: `128x128`.
+- **Aktivasyon Kuantizasyon Şeması**:
+  - Dinamik aktivasyon kuantizasyonu kullanır (`dynamic`).
 
-### Dequantization Method
+### De-kuantizasyon Yöntemi
 
-The FP8 weight file includes a `weight_scale_inv` field, which stores the dequantization scale for each weight block.
+FP8 ağırlık dosyası, her ağırlık bloğu için de-kuantizasyon ölçeğini depolayan `weight_scale_inv` alanını içerir.
 
-- **Storage Format**: `float32 Tensor`, stored alongside the weight data.
-- **Dequantization Formula**:
-  - If the weight block is not aligned to 128, it is zero-padded to 128 before calculating the scale. After quantization, the padded portion is removed.
-  - The dequantization process is performed as: `(128x128 weight block) * weight_scale_inv`.
+- **Depolama Formatı**: `float32 Tensor`, ağırlık verileriyle birlikte saklanır.
+- **De-kuantizasyon Formülü**:
+  - Ağırlık bloğu 128’e hizalanmamışsa, önce 128’e sıfır dolgu yapılır, ardından ölçek hesaplanır. Kuantizasyondan sonra dolgu kısmı kaldırılır.
+  - De-kuantizasyon işlemi şu şekilde gerçekleştirilir: `(128x128 ağırlık bloğu) * weight_scale_inv`.
 
-Through dequantization of the FP8 weights, runtime operations enable online quantization at a granularity of `per-token-per-128-channel`.
+FP8 ağırlıklarının de-kuantizasyonu sayesinde, çalışma zamanı işlemleri **token başına 128 kanal granülerliği** ile çevrimiçi kuantizasyona olanak tanır.
 
 ---
+```  
+Bu çeviri, hem teknik doğruluğu hem de Markdown uyumluluğunu koruyarak çevrilmiştir.
+```  
