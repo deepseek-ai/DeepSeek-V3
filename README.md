@@ -54,7 +54,7 @@
 6. [Yerel Olarak Nasıl Çalıştırılır](#6-yerel-olarak-nasıl-çalıştırılır)  
 7. [Lisans](#7-lisans)  
 8. [Atıf](#8-atıf)  
-9. [İletişim](#9-iletişim)  
+9. [İletişim](#9-i̇letişim)  
 
 
 ## 1. Giriş
