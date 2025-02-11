@@ -409,7 +409,7 @@ DeepSeek-V3 serisi (Base ve Chat dahil) ticari kullanımı desteklemektedir.
 
 ---
 
-## 8. Atıf (Citation)
+## 8. Atıf
 
 Bu çalışmayı aşağıdaki gibi atıfta bulunarak referans verebilirsiniz:
 
