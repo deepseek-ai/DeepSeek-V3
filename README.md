@@ -433,3 +433,10 @@ Eğer bu modeli veya içindeki teknikleri araştırmanızda kullanıyorsanız, l
 
 Herhangi bir sorunuz varsa, lütfen bir **issue** açın veya bizimle iletişime geçin:  
 📧 [service@deepseek.com](service@deepseek.com)
+
+```
+
+Bu çeviri, hem teknik doğruluğu hem de Markdown uyumluluğunu koruyarak çevrilmiştir.
+@can-deliktas
+
+```
