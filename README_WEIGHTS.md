@@ -95,5 +95,4 @@ FP8 ağırlıklarının de-kuantizasyonu sayesinde, çalışma zamanı işlemler
 ```  
 Bu çeviri, hem teknik doğruluğu hem de Markdown uyumluluğunu koruyarak çevrilmiştir.
 @can-deliktas
-
 ```  
