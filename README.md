@@ -46,15 +46,15 @@
 
 ## İçindekiler
 
-1. [Giriş](#1-giris)  
-2. [Model Özeti](#2-model-ozeti)  
+1. [Giriş](#1-giriş)  
+2. [Model Özeti](#2-model-özeti)  
 3. [Model İndirmeleri](#3-model-indirmeleri)  
-4. [Değerlendirme Sonuçları](#4-degerlendirme-sonuclari)  
+4. [Değerlendirme Sonuçları](#4-değerlendirme-sonuçları)  
 5. [Sohbet Web Sitesi ve API Platformu](#5-sohbet-web-sitesi-ve-api-platformu)  
-6. [Yerel Olarak Nasıl Çalıştırılır](#6-yerel-olarak-nasil-calistirilir)  
+6. [Yerel Olarak Nasıl Çalıştırılır](#6-yerel-olarak-nasıl-çalıştırılır)  
 7. [Lisans](#7-lisans)  
-8. [Atıf](#8-atif)  
-9. [İletişim](#9-iletisim)
+8. [Atıf](#8-atıf)  
+9. [İletişim](#9-iletişim)  
 
 
 ## 1. Giriş
