@@ -41,7 +41,11 @@
 
 
 <p align="center">
-  <a href="DeepSeek_V3.pdf"><b>Makale Bağlantısı</b>👁️</a>
+  <a href="DeepSeek_V3_Turkish.pdf"><b>Makale Bağlantısı - Türkçe</b>👁️</a>
+</p>
+
+<p align="center">
+  <a href="DeepSeek_V3.pdf"><b>Makale Bağlantısı - Orijinal</b>👁️</a>
 </p>
 
 ## İçindekiler
