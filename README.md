@@ -50,7 +50,7 @@
 2. [Model Özeti](#2-model-özeti)  
 3. [Model İndirmeleri](#3-model-i̇ndirmeleri)  
 4. [Değerlendirme Sonuçları](#4-değerlendirme-sonuçları)  
-5. [Sohbet Web Sitesi ve API Platformu](#5-sohbet-web-sitesi-ve-api-platformu)  
+5. [Sohbet Web Sitesi ve API Platformu](#5-sohbet-web-sitesi--api-platformu)  
 6. [Yerel Olarak Nasıl Çalıştırılır](#6-yerel-olarak-nasıl-çalıştırılır)  
 7. [Lisans](#7-lisans)  
 8. [Atıf](#8-atıf)  
