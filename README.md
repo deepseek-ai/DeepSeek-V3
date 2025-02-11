@@ -46,15 +46,15 @@
 
 ## İçindekiler
 
-1. [Giriş](#1-introduction)
-2. [Model Özeti](#2-model-summary)
-3. [Model İndirmeleri](#3-model-downloads)
-4. [Değerlendirme sonuçları](#4-evaluation-results)
-5. [Sohbet Web Sitesi ve API Platformu](#5-chat-website--api-platform)
-6. [Yerel olarak nasıl çalıştırılır](#6-how-to-run-locally)
-7. [Lisans](#7-license)
-8. [Atıf](#8-citation)
-9. [İletişim](#9-contact)
+1. [Giriş](#1-giris)  
+2. [Model Özeti](#2-model-ozeti)  
+3. [Model İndirmeleri](#3-model-indirmeleri)  
+4. [Değerlendirme Sonuçları](#4-degerlendirme-sonuclari)  
+5. [Sohbet Web Sitesi ve API Platformu](#5-sohbet-web-sitesi-ve-api-platformu)  
+6. [Yerel Olarak Nasıl Çalıştırılır](#6-yerel-olarak-nasil-calistirilir)  
+7. [Lisans](#7-lisans)  
+8. [Atıf](#8-atif)  
+9. [İletişim](#9-iletisim)
 
 
 ## 1. Giriş
