@@ -435,8 +435,6 @@ Herhangi bir sorunuz varsa, lütfen bir **issue** açın veya bizimle iletişime
 📧 [service@deepseek.com](service@deepseek.com)
 
 ```
-
 Bu çeviri, hem teknik doğruluğu hem de Markdown uyumluluğunu koruyarak çevrilmiştir.
 @can-deliktas
-
 ```
