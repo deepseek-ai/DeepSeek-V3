@@ -89,7 +89,7 @@ class ParallelEmbedding(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.dim = dim
-        assert vocab_size % world_size == 0
+        assert vocab_size % world_size == 0, f"Vocabulary size must be divisible by world size (world_size={world_size})"
         self.part_vocab_size = (vocab_size // world_size)
         self.vocab_start_idx = rank * self.part_vocab_size
         self.vocab_end_idx = self.vocab_start_idx + self.part_vocab_size
@@ -124,7 +124,7 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
         quantization-aware computations depending on the input parameters.
 
     Notes:
-        - If `weight` is quantized (e.g., `element_size() > 1`), a dequantized version 
+        - If `weight` is quantized (e.g., `element_size() == 1`), a dequantized version 
           is used for computation.
         - If `gemm_impl == "bf16"`, dequantization and a `bf16` GEMM operation are applied.
         - For other cases, the function applies quantization to `x` and uses `fp8_gemm` for computation.
@@ -176,7 +176,7 @@ class ColumnParallelLinear(Linear):
         dtype (optional): Data type for the layer. Defaults to `torch.bfloat16`.
     """
     def __init__(self, in_features: int, out_features: int, bias: bool = False, dtype = None):
-        assert out_features % world_size == 0
+        assert out_features % world_size == 0, f"Output features must be divisible by world size (world_size={world_size})"
         self.part_out_features = out_features // world_size
         super().__init__(in_features, self.part_out_features, bias, dtype)
 
@@ -205,7 +205,7 @@ class RowParallelLinear(Linear):
         dtype (optional): Data type for the layer. Defaults to `torch.bfloat16`.
     """
     def __init__(self, in_features: int, out_features: int, bias: bool = False, dtype = None):
-        assert in_features % world_size == 0
+        assert in_features % world_size == 0, f"Input features must be divisible by world size (world_size={world_size})"
         self.part_in_features = in_features // world_size
         super().__init__(self.part_in_features, out_features, bias, dtype)
 
@@ -566,8 +566,8 @@ class Gate(nn.Module):
             else:
                 group_scores = scores.topk(2, dim=-1)[0].sum(dim=-1)
             indices = group_scores.topk(self.topk_groups, dim=-1)[1]
-            mask = torch.zeros_like(scores[..., 0]).scatter_(1, indices, True)
-            scores = (scores * mask.unsqueeze(-1)).flatten(1)
+            mask = scores.new_ones(x.size(0), self.n_groups, dtype=bool).scatter_(1, indices, False)
+            scores = scores.masked_fill_(mask.unsqueeze(-1), float("-inf")).flatten(1)
         indices = torch.topk(scores, self.topk, dim=-1)[1]
         weights = original_scores.gather(1, indices)
         if self.score_func == "sigmoid":
@@ -633,7 +633,7 @@ class MoE(nn.Module):
         """
         super().__init__()
         self.dim = args.dim
-        assert args.n_routed_experts % world_size == 0
+        assert args.n_routed_experts % world_size == 0, f"Number of experts must be divisible by world size (world_size={world_size})"
         self.n_routed_experts = args.n_routed_experts
         self.n_local_experts = args.n_routed_experts // world_size
         self.n_activated_experts = args.n_activated_experts

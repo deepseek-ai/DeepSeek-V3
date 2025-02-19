@@ -43,8 +43,8 @@ def act_quant(x: torch.Tensor, block_size: int = 128) -> Tuple[torch.Tensor, tor
             - The quantized tensor with dtype `torch.float8_e4m3fn`.
             - A tensor of scaling factors with dtype `torch.float32`.
     """
-    assert x.is_contiguous()
-    assert x.size(-1) % block_size == 0
+    assert x.is_contiguous(), 'Input tensor must be contiguous'
+    assert x.size(-1) % block_size == 0, f'Last dimension size must be divisible by block_size (block_size={block_size})'
     y = torch.empty_like(x, dtype=torch.float8_e4m3fn)
     s = x.new_empty(*x.size()[:-1], x.size(-1) // block_size, dtype=torch.float32)
     grid = lambda meta: (triton.cdiv(x.numel(), meta['BLOCK_SIZE']), )
@@ -96,8 +96,8 @@ def weight_dequant(x: torch.Tensor, s: torch.Tensor, block_size: int = 128) -> t
     Raises:
         AssertionError: If `x` or `s` are not contiguous or if their dimensions are not 2.
     """
-    assert x.is_contiguous() and s.is_contiguous()
-    assert x.dim() == 2 and s.dim() == 2
+    assert x.is_contiguous() and s.is_contiguous(), 'Input tensors must be contiguous'
+    assert x.dim() == 2 and s.dim() == 2, 'Input tensors must have 2 dimensions'
     M, N = x.size()
     y = torch.empty_like(x, dtype=torch.get_default_dtype())
     grid = lambda meta: (triton.cdiv(M, meta['BLOCK_SIZE']), triton.cdiv(N, meta['BLOCK_SIZE']))
@@ -180,8 +180,8 @@ def fp8_gemm(a: torch.Tensor, a_s: torch.Tensor, b: torch.Tensor, b_s: torch.Ten
     Returns:
         torch.Tensor: The result of the matrix multiplication.
     """
-    assert a.is_contiguous() and b.is_contiguous()
-    assert a_s.is_contiguous() and b_s.is_contiguous()
+    assert a.is_contiguous() and b.is_contiguous(), 'Input tensors must be contiguous'
+    assert a_s.is_contiguous() and b_s.is_contiguous(), 'Scaling factor tensors must be contiguous'
     K = a.size(-1)
     M = a.numel() // K
     N = b.size(0)

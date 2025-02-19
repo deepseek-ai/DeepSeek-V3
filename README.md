@@ -7,42 +7,39 @@
 </div>
 <hr>
 <div align="center" style="line-height: 1;">
-  <a href="https://www.deepseek.com/" target="_blank" style="margin: 2px;">
-    <img alt="Homepage" src="https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/badge.svg?raw=true" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://chat.deepseek.com/" target="_blank" style="margin: 2px;">
-    <img alt="Chat" src="https://img.shields.io/badge/🤖%20Chat-DeepSeek%20V3-536af5?color=536af5&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://huggingface.co/deepseek-ai" target="_blank" style="margin: 2px;">
-    <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-DeepSeek%20AI-ffc107?color=ffc107&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-</div>
-
-<div align="center" style="line-height: 1;">
-  <a href="https://discord.gg/Tc7c45Zzu5" target="_blank" style="margin: 2px;">
-    <img alt="Discord" src="https://img.shields.io/badge/Discord-DeepSeek%20AI-7289da?logo=discord&logoColor=white&color=7289da" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/qr.jpeg?raw=true" target="_blank" style="margin: 2px;">
-    <img alt="Wechat" src="https://img.shields.io/badge/WeChat-DeepSeek%20AI-brightgreen?logo=wechat&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://twitter.com/deepseek_ai" target="_blank" style="margin: 2px;">
-    <img alt="Twitter Follow" src="https://img.shields.io/badge/Twitter-deepseek_ai-white?logo=x&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-</div>
-
-<div align="center" style="line-height: 1;">
-  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE-CODE" style="margin: 2px;">
-    <img alt="Code License" src="https://img.shields.io/badge/Code_License-MIT-f5de53?&color=f5de53" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE-MODEL" style="margin: 2px;">
-    <img alt="Model License" src="https://img.shields.io/badge/Model_License-Model_Agreement-f5de53?&color=f5de53" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-</div>
-
-
-<p align="center">
+  <a href="https://www.deepseek.com/"><img alt="Homepage"
+    src="https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/badge.svg?raw=true"/></a>
+  <a href="https://chat.deepseek.com/"><img alt="Chat"
+    src="https://img.shields.io/badge/🤖%20Chat-DeepSeek%20V3-536af5?color=536af5&logoColor=white"/></a>
+  <a href="https://huggingface.co/deepseek-ai"><img alt="Hugging Face"
+    src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-DeepSeek%20AI-ffc107?color=ffc107&logoColor=white"/></a>
+  <br>
+  <a href="https://discord.gg/Tc7c45Zzu5"><img alt="Discord"
+    src="https://img.shields.io/badge/Discord-DeepSeek%20AI-7289da?logo=discord&logoColor=white&color=7289da"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/qr.jpeg?raw=true"><img alt="Wechat"
+    src="https://img.shields.io/badge/WeChat-DeepSeek%20AI-brightgreen?logo=wechat&logoColor=white"/></a>
+  <a href="https://twitter.com/deepseek_ai"><img alt="Twitter Follow"
+    src="https://img.shields.io/badge/Twitter-deepseek_ai-white?logo=x&logoColor=white"/></a>
+  <br>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE-CODE"><img alt="Code License"
+    src="https://img.shields.io/badge/Code_License-MIT-f5de53?&color=f5de53"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE-MODEL"><img alt="Model License"
+    src="https://img.shields.io/badge/Model_License-Model_Agreement-f5de53?&color=f5de53"/></a>
+  <br>
   <a href="DeepSeek_V3.pdf"><b>Paper Link</b>👁️</a>
-</p>
+</div>
+
+## Table of Contents
+
+1. [Introduction](#1-introduction)
+2. [Model Summary](#2-model-summary)
+3. [Model Downloads](#3-model-downloads)
+4. [Evaluation Results](#4-evaluation-results)
+5. [Chat Website & API Platform](#5-chat-website--api-platform)
+6. [How to Run Locally](#6-how-to-run-locally)
+7. [License](#7-license)
+8. [Citation](#8-citation)
+9. [Contact](#9-contact)
 
 
 ## 1. Introduction
@@ -99,7 +96,7 @@ Throughout the entire training process, we did not experience any irrecoverable 
 </div>
 
 > [!NOTE]
-> The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights.**
+> The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights.
 
 To ensure optimal performance and flexibility, we have partnered with open-source communities and hardware vendors to provide multiple ways to run the model locally. For step-by-step guidance, check out Section 6: [How_to Run_Locally](#6-how-to-run-locally).
 
@@ -130,7 +127,7 @@ For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md
 | | WinoGrande (Acc.) | 5-shot | **86.3** | 82.3 | 85.2 | 84.9 |
 | | RACE-Middle (Acc.) | 5-shot | 73.1 | 68.1 | **74.2** | 67.1 |
 | | RACE-High (Acc.) | 5-shot | 52.6 | 50.3 | **56.8** | 51.3 |
-| | TriviaQA (EM) | 5-shot | 80.0 | 71.9 | **82.7** | **82.9** |
+| | TriviaQA (EM) | 5-shot | 80.0 | 71.9 | 82.7 | **82.9** |
 | | NaturalQuestions (EM) | 5-shot | 38.6 | 33.2 | **41.5** | 40.0 |
 | | AGIEval (Acc.) | 0-shot | 57.5 | 75.8 | 60.6 | **79.6** |
 | Code | HumanEval (Pass@1) | 0-shot | 43.3 | 53.0 | 54.9 | **65.2** |
@@ -249,7 +246,7 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 ```
 
 > [!NOTE]
-> Hugging Face's Transformers has not been directly supported yet.**
+> Hugging Face's Transformers has not been directly supported yet.
 
 ### 6.1 Inference with DeepSeek-Infer Demo (example only)
 
@@ -259,7 +256,7 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 > Linux with Python 3.10 only. Mac and Windows are not supported.
 
 Dependencies:
-```
+```pip-requirements
 torch==2.4.1
 triton==3.0.0
 transformers==4.46.3
