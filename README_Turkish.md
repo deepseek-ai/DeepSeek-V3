@@ -123,7 +123,7 @@ Adım adım rehberlik için **Bölüm 6: [Nasıl Yerel Çalıştırılır](#6-ho
 
 **Daha derin teknik ayrıntılarla ilgilenen geliştiriciler için**,  
 **Ana Model ağırlıkları ve Çoklu Token Tahmini (MTP) Modülleri hakkında detaylı bilgileri** içeren  
-[README_WEIGHTS.md](./README_WEIGHTS.md) dosyasını incelemenizi öneririz.  
+[README_WEIGHTS_Turkish.md](./README_WEIGHTS_Turkish.md) dosyasını incelemenizi öneririz.  
 
 Lütfen unutmayın: **MTP desteği şu anda topluluk tarafından aktif olarak geliştirilmektedir**.  
 **Katkılarınızı ve geri bildirimlerinizi memnuniyetle karşılıyoruz!**  
