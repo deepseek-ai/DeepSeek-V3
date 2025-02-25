@@ -367,7 +367,7 @@ The [MindIE](https://www.hiascend.com/en/software/mindie) framework from the Hua
 
 We encourage you to carefully follow the setup and usage instructions provided in this README to ensure proper configuration of DeepSeek-V3.
 
-If you encounter any issues not listed in the **Troubleshooting** section, If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com). Be sure to include as much detail as possible about your setup and the problem you're experiencing. This helps us assist you more effectively.
+If you encounter any issues not listed in the **Troubleshooting** section, or if you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com). Be sure to include as much detail as possible about your setup and the problem you're experiencing. This helps us assist you more effectively.
 
 
 ## 8. License
