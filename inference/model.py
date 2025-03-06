@@ -679,7 +679,7 @@ class MoE(nn.Module):
         y = torch.zeros_like(x)
         counts = torch.bincount(indices.flatten(), minlength=self.n_routed_experts).tolist()
         for i in range(self.experts_start_idx, self.experts_end_idx):
-            if counts[i] == 0:
+            if counts[i] == 0 or self.experts[i] is None:
                 continue
             expert = self.experts[i]
             idx, top = torch.where(indices == i)
