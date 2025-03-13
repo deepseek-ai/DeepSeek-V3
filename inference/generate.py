@@ -1,7 +1,7 @@
 import os
 import json
 from argparse import ArgumentParser
-from typing import List
+    from typing import List
 
 import torch
 import torch.distributed as dist
