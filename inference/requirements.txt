@@ -1,4 +1,4 @@
-torch==2.4.1
+torch==2.5.1
 triton==3.0.0
 transformers==4.46.3
 safetensors==0.4.5
