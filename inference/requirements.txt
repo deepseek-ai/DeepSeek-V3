@@ -1,4 +1,4 @@
-torch==2.4.1
-triton==3.0.0
+torch==2.6.0
+git+https://github.com/NripeshN/triton.git@main#subdirectory=python
 transformers==4.46.3
 safetensors==0.4.5
