@@ -26,7 +26,7 @@
   <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE-MODEL"><img alt="Model License"
     src="https://img.shields.io/badge/Model_License-Model_Agreement-f5de53?&color=f5de53"/></a>
   <br>
-  <a href="https://arxiv.org/pdf/2412.19437"><b>Paper Link</b>👁️</a>
+  <a href="https://arxiv.org/abs/2412.19437"><b>arXiv paper</b></a>
 </div>
 
 ## Table of Contents
