@@ -80,26 +80,28 @@ El archivo de pesos FP8 introduce un campo `quantization_config` que describe el
   "fmt": "e4m3",
   "quant_method": "fp8",
   "weight_block_size": [128, 128]
-}
-Formato de Cuantización:
+
+**Formato de Cuantización:**
 
 Tipo de formato: fp8 y e4m3 (correspondiente a torch.float8_e4m3fn).
 
 Tamaño del bloque de pesos: 128x128.
 
-Esquema de Cuantización de Activaciones:
+**Esquema de Cuantización de Activaciones:**
 
 Utiliza cuantización dinámica de activaciones (dynamic).
 
 Método de Descuantización
 El archivo de pesos FP8 incluye un campo weight_scale_inv, que almacena la escala de descuantización para cada bloque de pesos.
 
-Formato de Almacenamiento: Tensor float32, almacenado junto con los datos de peso.
+**Formato de Almacenamiento:**  `float32 Tensor`, almacenado junto con los datos de peso.
 
-Fórmula de Descuantización:
+**sFórmula de Descuantización:**
 
 Si el bloque de peso no está alineado a 128, se rellena con ceros (padding) hasta 128 antes de calcular la escala. Luego de cuantizar, la parte rellenada se elimina.
 
-El proceso de descuantización se realiza así: (bloque de peso 128x128) * weight_scale_inv.
+El proceso de descuantización se realiza así:  `(128x128 weight block) * weight_scale_inv`.
 
-Mediante la descuantización de los pesos FP8, las operaciones en tiempo de ejecución permiten la cuantización en línea con una granularidad de por token por cada 128 canales.
+Mediante la descuantización de los pesos FP8, las operaciones en tiempo de ejecución permiten la cuantización en línea `per-token-per-128-channel`.
+
+---
