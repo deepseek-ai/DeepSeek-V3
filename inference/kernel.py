@@ -105,6 +105,35 @@ def weight_dequant(x: torch.Tensor, s: torch.Tensor, block_size: int = 128) -> t
     return y
 
 
+@triton.jit
+def weight_quant_kernel(x_ptr, y_ptr, s_ptr, M, N, BLOCK_SIZE: tl.constexpr):
+    pid_m = tl.program_id(axis=0)
+    pid_n = tl.program_id(axis=1)
+    n = tl.cdiv(N, BLOCK_SIZE)
+    offs_m = pid_m * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    offs_n = pid_n * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    offs = offs_m[:, None] * N + offs_n[None, :]
+    mask = (offs_m[:, None] < M) & (offs_n[None, :] < N)
+    x = tl.load(x_ptr + offs, mask=mask).to(tl.float32)
+    max_val = tl.max(tl.abs(x))
+    s = max_val / 448.0  # Same scaling as in act_quant
+    y = x / s
+    y = y.to(y_ptr.dtype.element_ty)
+    tl.store(y_ptr + offs, y, mask=mask)
+    tl.store(s_ptr + pid_m * n + pid_n, s)
+
+
+def weight_quant(x: torch.Tensor, block_size: int = 128) -> Tuple[torch.Tensor, torch.Tensor]:
+    assert x.is_contiguous()
+    assert x.dim() == 2
+    M, N = x.size()
+    y = torch.empty_like(x, dtype=torch.float8_e4m3fn)
+    s = x.new_empty(triton.cdiv(M, block_size), triton.cdiv(N, block_size), dtype=torch.float32)
+    grid = lambda meta: (triton.cdiv(M, meta['BLOCK_SIZE']), triton.cdiv(N, meta['BLOCK_SIZE']))
+    weight_quant_kernel[grid](x, y, s, M, N, BLOCK_SIZE=block_size)
+    return y, s
+
+
 fp8_gemm_configs = [
     Config({'BLOCK_SIZE_M': block_m, 'BLOCK_SIZE_N': block_n, 'BLOCK_SIZE_K': 128}, num_stages=num_stages, num_warps=8)
     for block_m in [16, 32, 64] for block_n in [32, 64, 128] for num_stages in [3, 4, 5, 6]
