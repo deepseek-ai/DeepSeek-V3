@@ -1,0 +1,476 @@
+function Meidanshahi_Complete_gaoptimset()
+%--------------------------------------------------------------------------
+% MEIDANSHAHI_COMPLETE_GAOPTIMSET :
+%   Script complet en un seul fichier pour l'optimisation du dessalage
+%   électrostatique (PBE). Identique à la version 'optimoptions', sauf
+%   qu'on utilise 'gaoptimset' pour configurer ga().
+%
+% Optimisation de 4 variables (X, Qd, T, X_recycle) :
+%   0) X         ∈ [0..10] %         (taux eau de lavage)
+%   1) Qd        ∈ [0..5]  L/h       (désémulsifiant)
+%   2) T         ∈ [50..120] °C      (température)
+%   3) X_recycle ∈ [0..100] %        (recyclage purge)
+%
+% Objectif : minimiser f = (salinité / 40) - (efficacité / 100).
+%--------------------------------------------------------------------------
+
+    %% 1. PARAMÈTRES GLOBAUX, PHYSIQUES ET DISCRÉTISATION
+
+    % Densités (kg/m³)
+    rho_h2o  = 1000;
+    rho_oil  = 850;
+
+    % Viscosités
+    mu_water = 1e-3;   % eau
+    A_mu = 11.98;
+    B_mu = 0.0198;     % => mu_oil = A_mu * exp(-B_mu*(T en K))
+
+    % Tension interfaciale
+    sigma_base = 0.03; % ~30 mN/m
+
+    % Gravité, permittivité
+    g = 9.81;
+    epsilon0 = 8.854e-12;
+
+    % Vanne de mélange
+    DeltaP_valve = 1e5;      % Pa
+    t_res_valve  = 0.1;      % s
+    v_char_valve = sqrt(2*DeltaP_valve / rho_oil);
+
+    % Cassure / coalescence
+    We_crit = 1.0;
+    Ca_crit = 0.5;
+    K_break = 1.0;
+    K_coal  = 1.0;
+
+    % Brute initiale
+    initial_water_frac = 0.03;   % ~3 %
+    initial_salt_conc  = 100;    % mg sel / L brut
+    oil_flow_Lh        = 1e5;    % 100 m³/h => 100000 L/h
+
+    % Temps de séjour dessaleurs
+    t_res_desalter = 60;  % s
+    dt_desalter    = 1;   % s (pas)
+
+    % Séparation gravitaire
+    d_sep = 3e-4;    % 300 µm
+
+    % Recyclage
+    recycle_tol = 1e-3;
+
+    % Désémulsifiant
+    a_sigma = 1;
+    b_sigma = 0.1;
+    sigma_min_factor = 0.01;
+
+    % Champ électrique (AC)
+    E_field = 3e5;  % 3 kV/cm => 300000 V/m
+
+    % Discrétisation PBE (méthode des classes)
+    N_classes = 20;
+    d_min = 1e-6;   % 1 µm
+    d_max = 1e-3;   % 1 mm
+    d_classes = logspace(log10(d_min), log10(d_max), N_classes);
+    v_classes = (pi/6)*d_classes.^3;
+    lambda    = d_min;  % échelle turbulence
+
+    %% 2. OPTIMISATION AVEC gaoptimset (pour versions MATLAB plus anciennes)
+
+    % Bornes : [X, Qd, T, X_recycle]
+    lb = [0,   0,   50,   0  ];
+    ub = [10,  5,  120, 100 ];
+
+    % Définition des options via gaoptimset
+    opts = gaoptimset('Display','iter', ...
+                      'PopulationSize',20, ...
+                      'Generations',20);  
+    % Remarque : si vous aviez un MATLAB plus récent ET le Global Optimization Toolbox,
+    % vous pourriez mettre 'MaxGenerations' => 'Generations'. 
+    % Mais sur de vieilles versions, le param s'appelle 'Generations'.
+
+    % Appel de ga (4 variables)
+    [opt_vars, fval] = ga(@(vars) localObj(vars, ...
+        rho_h2o, rho_oil, mu_water, A_mu, B_mu, sigma_base, g, epsilon0, ...
+        initial_water_frac, initial_salt_conc, ...
+        t_res_desalter, dt_desalter, d_sep, recycle_tol, oil_flow_Lh, ...
+        a_sigma, b_sigma, sigma_min_factor, ...
+        DeltaP_valve, t_res_valve, v_char_valve, ...
+        We_crit, Ca_crit, K_break, K_coal, lambda, ...
+        d_classes, v_classes, N_classes, E_field), ...
+        4, [], [], [], [], lb, ub, [], opts);
+
+    X_opt     = opt_vars(1);
+    Qd_opt    = opt_vars(2);
+    T_opt     = opt_vars(3);
+    Xrec_opt  = opt_vars(4);
+
+    % Simulation finale
+    [sal_opt, eff_opt, prof_opt] = simulateDesalting(X_opt, Qd_opt, T_opt, Xrec_opt, ...
+        rho_h2o, rho_oil, mu_water, A_mu, B_mu, sigma_base, g, epsilon0, ...
+        initial_water_frac, initial_salt_conc, ...
+        t_res_desalter, dt_desalter, d_sep, recycle_tol, oil_flow_Lh, ...
+        a_sigma, b_sigma, sigma_min_factor, ...
+        DeltaP_valve, t_res_valve, v_char_valve, ...
+        We_crit, Ca_crit, K_break, K_coal, lambda, ...
+        d_classes, v_classes, N_classes, E_field);
+
+    % Affichage
+    fprintf('\n=== Résultats Optimaux (gaoptimset) ===\n');
+    fprintf('X           = %.2f %%\n', X_opt);
+    fprintf('Qd          = %.2f L/h\n', Qd_opt);
+    fprintf('T           = %.1f °C\n', T_opt);
+    fprintf('X_recycle   = %.1f %%\n', Xrec_opt);
+    fprintf('Salinité    = %.2f mg/L\n', sal_opt);
+    fprintf('Efficacité  = %.1f %%\n', eff_opt);
+    fprintf('fval        = %.2f\n', fval);
+
+    %% 3. FIGURES : DISTRIBUTION & ANALYSE DE SENSIBILITÉ
+
+    % 3.1 Distribution granulométrique
+    N_init = prof_opt.initial.N;
+    N_mix  = prof_opt.afterMix.N;
+    N_d1   = prof_opt.afterDesal1.N;
+    N_d2   = prof_opt.afterDesal2.N;
+
+    vol_init = N_init.*v_classes;
+    vol_mix  = N_mix .*v_classes;
+    vol_d1   = N_d1  .*v_classes;
+    vol_d2   = N_d2  .*v_classes;
+
+    sum_init = sum(vol_init);
+    pct_init = 100*(vol_init / sum_init);
+    pct_mix  = 100*(vol_mix  / sum_init);
+    pct_d1   = 100*(vol_d1   / sum_init);
+    pct_d2   = 100*(vol_d2   / sum_init);
+
+    figure;
+    semilogx(d_classes*1e6, pct_init,'-k','LineWidth',1.5); hold on;
+    semilogx(d_classes*1e6, pct_mix ,'--b','LineWidth',1.5);
+    semilogx(d_classes*1e6, pct_d1  ,'-.r','LineWidth',1.5);
+    semilogx(d_classes*1e6, pct_d2  ,':m','LineWidth',2);
+    hold off;
+    xlabel('Diamètre (µm)');
+    ylabel('Volume eau (%) relatif à l''initial');
+    legend('Initial','Après vanne','Après 1er dessal','Après 2e dessal','Location','best');
+    title('Distribution de taille des gouttelettes (gaoptimset)');
+    grid on;
+
+    % 3.2 Analyse de sensibilité
+    vars_base = [X_opt, Qd_opt, T_opt, Xrec_opt];
+    var_names = {'X(%)','Qd(L/h)','T(°C)','X_{recycle}(%)'};
+    var_ranges = {
+        linspace(0,10,6),
+        linspace(0,5,6),
+        linspace(50,120,6),
+        linspace(0,100,6)
+    };
+
+    for v=1:4
+        vals = var_ranges{v};
+        sal_vals = zeros(size(vals));
+        eff_vals = zeros(size(vals));
+
+        for i=1:length(vals)
+            testVars = vars_base;
+            testVars(v) = vals(i);
+
+            [sal_vals(i), eff_vals(i)] = simulateDesalting(testVars(1), testVars(2), testVars(3), testVars(4), ...
+                rho_h2o, rho_oil, mu_water, A_mu, B_mu, sigma_base, g, epsilon0, ...
+                initial_water_frac, initial_salt_conc, ...
+                t_res_desalter, dt_desalter, d_sep, recycle_tol, oil_flow_Lh, ...
+                a_sigma, b_sigma, sigma_min_factor, ...
+                DeltaP_valve, t_res_valve, v_char_valve, ...
+                We_crit, Ca_crit, K_break, K_coal, lambda, ...
+                d_classes, v_classes, N_classes, E_field);
+        end
+
+        figure;
+        yyaxis left;
+        plot(vals, sal_vals,'-o','LineWidth',1.5); ylabel('Salinité (mg/L)');
+        yyaxis right;
+        plot(vals, eff_vals,'-s','LineWidth',1.5); ylabel('Efficacité (%)');
+        xlabel(var_names{v});
+        legend('Salinité','Efficacité','Location','best'); grid on;
+        title(['Sensibilité : ' var_names{v} ' (gaoptimset)']);
+    end
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%                FONCTIONS LOCALES (mêmes que précédemment)           %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function f = localObj(vars, ...
+    rho_h2o, rho_oil, mu_water, A_mu, B_mu, sigma_base, g, epsilon0, ...
+    initial_water_frac, initial_salt_conc, ...
+    t_res_desalter, dt_desalter, d_sep, recycle_tol, oil_flow_Lh, ...
+    a_sigma, b_sigma, sigma_min_factor, ...
+    DeltaP_valve, t_res_valve, v_char_valve, ...
+    We_crit, Ca_crit, K_break, K_coal, lambda, ...
+    d_classes, v_classes, N_classes, E_field)
+
+    [sal, eff] = simulateDesalting(vars(1), vars(2), vars(3), vars(4), ...
+        rho_h2o, rho_oil, mu_water, A_mu, B_mu, sigma_base, g, epsilon0, ...
+        initial_water_frac, initial_salt_conc, ...
+        t_res_desalter, dt_desalter, d_sep, recycle_tol, oil_flow_Lh, ...
+        a_sigma, b_sigma, sigma_min_factor, ...
+        DeltaP_valve, t_res_valve, v_char_valve, ...
+        We_crit, Ca_crit, K_break, K_coal, lambda, ...
+        d_classes, v_classes, N_classes, E_field);
+
+    % objectif = (sal / 40) - (eff / 100)
+    f = (sal/40) - (eff/100);
+end
+
+
+function [sal_out, eff_out, dist_profiles] = simulateDesalting( ...
+    X, Qd, T, X_recycle, ...
+    rho_h2o, rho_oil, mu_water, A_mu, B_mu, sigma_base, g, epsilon0, ...
+    initial_water_frac, initial_salt_conc, ...
+    t_res_desalter, dt_desalter, d_sep, recycle_tol, oil_flow_Lh, ...
+    a_sigma, b_sigma, sigma_min_factor, ...
+    DeltaP_valve, t_res_valve, v_char_valve, ...
+    We_crit, Ca_crit, K_break, K_coal, lambda, ...
+    d_classes, v_classes, N_classes, E_field)
+
+    % Viscosité de l'huile en fonction de T
+    T_K = T + 273.15;
+    mu_oil_local = A_mu * exp(-B_mu * T_K);
+
+    % Désémulsifiant => sigma local
+    conc_demul = Qd / oil_flow_Lh;
+    sigma_local = sigma_base*(1 - a_sigma*(conc_demul)/(b_sigma + conc_demul));
+    if sigma_local < sigma_min_factor*sigma_base
+        sigma_local = sigma_min_factor*sigma_base;
+    end
+
+    % Eau de lavage + recycle
+    X_frac = X/100;
+    recycle_frac = X_recycle/100;
+
+    water_feed_guess = initial_water_frac + X_frac;
+    s_out=0; e_out=0; p_out=struct(); w_left=0;
+
+    for iter=1:20
+        water_feed_frac = initial_water_frac + X_frac + ...
+            recycle_frac*(water_feed_guess - initial_water_frac - X_frac);
+
+        [s_out,e_out,p_out,w_left] = oneSimulationStep(water_feed_frac, mu_oil_local, sigma_local, ...
+            rho_h2o, rho_oil, mu_water, ...
+            initial_water_frac, initial_salt_conc, ...
+            t_res_desalter, dt_desalter, d_sep, ...
+            DeltaP_valve, t_res_valve, v_char_valve, ...
+            We_crit, Ca_crit, K_break, K_coal, lambda, ...
+            d_classes, v_classes, N_classes, E_field, ...
+            g, epsilon0);
+
+        water_purged = water_feed_frac - w_left;
+        new_feed = initial_water_frac + X_frac + recycle_frac*water_purged;
+        if abs(new_feed - water_feed_frac)<recycle_tol
+            break;
+        end
+        water_feed_guess = new_feed;
+    end
+
+    if X_recycle==0
+        [s_out,e_out,p_out,~] = oneSimulationStep(water_feed_guess, mu_oil_local, sigma_local, ...
+            rho_h2o, rho_oil, mu_water, ...
+            initial_water_frac, initial_salt_conc, ...
+            t_res_desalter, dt_desalter, d_sep, ...
+            DeltaP_valve, t_res_valve, v_char_valve, ...
+            We_crit, Ca_crit, K_break, K_coal, lambda, ...
+            d_classes, v_classes, N_classes, E_field, ...
+            g, epsilon0);
+    end
+
+    sal_out   = s_out;
+    eff_out   = e_out;
+    dist_profiles = p_out;
+end
+
+
+function [sal_out, eff_out, profiles, water_left_frac] = oneSimulationStep( ...
+    water_feed_frac, mu_oil_local, sigma_local, ...
+    rho_h2o, rho_oil, mu_water, ...
+    initial_water_frac, initial_salt_conc, ...
+    t_res_desalter, dt_desalter, d_sep, ...
+    DeltaP_valve, t_res_valve, v_char_valve, ...
+    We_crit, Ca_crit, K_break, K_coal, lambda, ...
+    d_classes, v_classes, N_classes, E_field, ...
+    g, epsilon0)
+
+    %% Distribution initiale
+    N0 = zeros(1,N_classes);
+    tot_water_vol = water_feed_frac;
+    idx_max = N_classes; idx_sub = N_classes-1;
+    vol_max = v_classes(idx_max);
+    vol_sub = v_classes(idx_sub);
+    vol_in_max = 0.9*tot_water_vol;
+    vol_in_sub = 0.1*tot_water_vol;
+    N0(idx_max) = vol_in_max/vol_max;
+    N0(idx_sub) = vol_in_sub/vol_sub;
+
+    %% Cassure (vanne)
+    Ca_valve = mu_oil_local * v_char_valve / sigma_local;
+    d_min_loc = d_classes(1);
+    We_valve  = rho_oil*(v_char_valve^2)* d_min_loc / sigma_local;
+
+    N_afterMix = solveBreakagePBE(N0, Ca_valve, We_valve, mu_oil_local, ...
+        DeltaP_valve, t_res_valve, rho_oil, K_break, We_crit, Ca_crit, lambda, ...
+        d_classes, v_classes, N_classes);
+
+    %% 1er dessaleur => coalescence
+    N_afterDesal1 = solveCoalescence(N_afterMix, mu_oil_local, sigma_local, ...
+        rho_h2o, rho_oil, mu_water, t_res_desalter, dt_desalter, ...
+        d_sep, K_coal, E_field, g, epsilon0, d_classes, v_classes, N_classes);
+
+    for i=1:N_classes
+        if d_classes(i)>= d_sep
+            N_afterDesal1(i)=0;
+        end
+    end
+
+    %% 2e dessaleur => coalescence
+    N_afterDesal2 = solveCoalescence(N_afterDesal1, mu_oil_local, sigma_local, ...
+        rho_h2o, rho_oil, mu_water, t_res_desalter, dt_desalter, ...
+        d_sep, K_coal, E_field, g, epsilon0, d_classes, v_classes, N_classes);
+
+    for i=1:N_classes
+        if d_classes(i)>= d_sep
+            N_afterDesal2(i)=0;
+        end
+    end
+
+    water_left_frac = sum(N_afterDesal2.*v_classes);
+
+    salt_conc_eau = initial_salt_conc / water_feed_frac;
+    sal_out = salt_conc_eau * water_left_frac;
+    eff_out = (initial_salt_conc - sal_out)/initial_salt_conc*100;
+    if eff_out>100
+        eff_out=100;
+    end
+
+    profiles.initial.N = N0;
+    profiles.initial.water_frac   = tot_water_vol;
+    profiles.afterMix.N          = N_afterMix;
+    profiles.afterMix.water_frac = sum(N_afterMix.*v_classes);
+    profiles.afterDesal1.N       = N_afterDesal1;
+    profiles.afterDesal1.water_frac = sum(N_afterDesal1.*v_classes);
+    profiles.afterDesal2.N       = N_afterDesal2;
+    profiles.afterDesal2.water_frac = water_left_frac;
+end
+
+
+function N_out = solveBreakagePBE(N_in, Ca_valve, We_valve, mu_oil_local, ...
+    DeltaP_valve, t_res_valve, rho_oil, K_break, We_crit, Ca_crit, lambda, ...
+    d_classes, v_classes, N_classes)
+
+    dtv = t_res_valve/10;
+    N_current = N_in;
+
+    for step=1:10
+        births = zeros(1,N_classes);
+        deaths = zeros(1,N_classes);
+        for k=1:N_classes
+            if N_current(k)<=0, continue; end
+            g_k = local_g(d_classes(k), Ca_valve, We_valve, mu_oil_local, ...
+                DeltaP_valve, t_res_valve, rho_oil, K_break, We_crit, Ca_crit, lambda);
+            if g_k<=0, continue; end
+
+            nb_breaks = g_k*N_current(k)*dtv;
+            nb_breaks = min(nb_breaks, N_current(k));
+            if nb_breaks<=0, continue; end
+
+            v0 = v_classes(k);
+            for i=1:(k-1)
+                v_mid = v_classes(i);
+                f_val = breakage_distribution(v_mid, v0);
+                vol_to_i = f_val*v0;
+                num_frag = vol_to_i / v_mid;
+                births(i) = births(i) + nb_breaks*num_frag;
+            end
+            deaths(k) = deaths(k) + nb_breaks;
+        end
+
+        N_current = N_current + births - deaths;
+        N_current(N_current<0)=0;
+    end
+
+    N_out = N_current;
+end
+
+
+function val_g = local_g(dk, Ca_valve, We_valve, mu_oil_local, ...
+    DeltaP_valve, t_res_valve, rho_oil, K_break, We_crit, Ca_crit, lambda)
+
+    if Ca_valve<=Ca_crit
+        val_g=0;
+        return;
+    end
+
+    val_g = K_break * 63.927 * ((We_valve^(11/5))/We_crit) * ...
+            sqrt((DeltaP_valve/(t_res_valve*rho_oil))/mu_oil_local) * ...
+            (Ca_valve^2.2) * (dk/(2*lambda))^(4/5);
+end
+
+
+function f_val = breakage_distribution(v, v0)
+    % Distribution gaussienne (Coulaloglou-Tavlarides)
+    f_val = 2.4./v0 .* exp(-4.5.*( (2.*v - v0).^2 ./ v0.^2 ));
+end
+
+
+function N_out = solveCoalescence(N_in, mu_oil_local, sigma_local, ...
+    rho_h2o, rho_oil, mu_water, t_res_desalter, dt_desalter, ...
+    d_sep, K_coal, E_field, g, epsilon0, d_classes, v_classes, N_classes)
+
+    N_current = N_in;
+    steps = floor(t_res_desalter/dt_desalter);
+
+    for s=1:steps
+        births = zeros(1,N_classes);
+        deaths = zeros(1,N_classes);
+        vol_water = sum(N_current.*v_classes);
+        delta = min(vol_water,0.999);
+        mu_ratio = mu_water/mu_oil_local;
+
+        for i=1:N_classes
+            for j=i:N_classes
+                if N_current(i)<=0 || N_current(j)<=0, continue; end
+
+                beta_ij = K_coal * pi*(d_classes(i)+d_classes(j))^2 * ...
+                    ((mu_ratio+1)/((3*mu_ratio+2)*mu_oil_local)*abs(rho_h2o-rho_oil)*(d_classes(i)/2)^2*(1-delta^2)*g);
+
+                eff_coal = collision_eff_withEF(delta, d_classes(i), E_field, ...
+                                                epsilon0, rho_h2o, rho_oil, g);
+                beta_ij = beta_ij * eff_coal;
+
+                col = beta_ij * N_current(i)*N_current(j)*dt_desalter;
+                if i==j
+                    col=0.5*col;
+                end
+                col=min(col, min(N_current(i),N_current(j)));
+                if col>0
+                    v_new = v_classes(i)+v_classes(j);
+                    [~, k] = min(abs(v_classes - v_new));
+                    births(k)= births(k)+ col;
+                    deaths(i)= deaths(i)+ col;
+                    deaths(j)= deaths(j)+ col;
+                end
+            end
+        end
+
+        N_current = N_current + births - deaths;
+        N_current(N_current<0)=0;
+    end
+
+    N_out = N_current;
+end
+
+
+function eff_val = collision_eff_withEF(delta, d_i, E, epsilon0, rho_h2o, rho_oil, g)
+    eff_val = 0.45 * ( ...
+        (2.*delta.*abs(rho_h2o - rho_oil).*(1-delta).*g.*(d_i/2).^3) ./ ...
+        (3.*epsilon0.*(1+delta).^2.*E.^2) ...
+    ).^(-0.55);
+end
