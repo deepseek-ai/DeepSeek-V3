@@ -69,7 +69,7 @@ def generate(
         List[List[int]]: A list of lists containing the generated tokens for each sequence.
     """
     prompt_lens = [len(t) for t in prompt_tokens]
-    assert max(prompt_lens) <= model.max_seq_len
+    assert max(prompt_lens) <= model.max_seq_len, f"Prompt length exceeds model maximum sequence length (max_seq_len={model.max_seq_len})"
     total_len = min(model.max_seq_len, max_new_tokens + max(prompt_lens))
     tokens = torch.full((len(prompt_tokens), total_len), -1, dtype=torch.long, device="cuda")
     for i, t in enumerate(prompt_tokens):
@@ -162,7 +162,7 @@ def main(
     else:
         with open(input_file) as f:
             prompts = [line.strip() for line in f.readlines()]
-        assert len(prompts) <= args.max_batch_size
+        assert len(prompts) <= args.max_batch_size, f"Number of prompts exceeds maximum batch size ({args.max_batch_size})"
         prompt_tokens = [tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True) for prompt in prompts]
         completion_tokens = generate(model, prompt_tokens, max_new_tokens, tokenizer.eos_token_id, temperature)
         completions = tokenizer.batch_decode(completion_tokens, skip_special_tokens=True)
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         --temperature (float, optional): Temperature for sampling. Defaults to 0.2.
 
     Raises:
-        AssertionError: If neither input-file nor interactive mode is specified.
+        ValueError: If neither input-file nor interactive mode is specified.
     """
     parser = ArgumentParser()
     parser.add_argument("--ckpt-path", type=str, required=True)
@@ -198,10 +198,16 @@ if __name__ == "__main__":
     parser.add_argument("--max-new-tokens", type=int, default=200)
     parser.add_argument("--temperature", type=float, default=0.2)
     args = parser.parse_args()
-    
+
     # Validate input
     if not (args.input_file or args.interactive):
-        print("Erro: É necessário especificar --input-file ou ativar --interactive.")
-        exit(1)
-    
-    main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature)
+        raise ValueError("You must specify either --input-file or enable --interactive mode.")
+
+    main(
+        args.ckpt_path,
+        args.config,
+        args.input_file,
+        args.interactive,
+        args.max_new_tokens,
+        args.temperature,
+    )

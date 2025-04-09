@@ -54,7 +54,6 @@ def fp8_gemm_kernel(
 
     offs_m = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
     offs_n = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
-
     mask_m = offs_m < M
     mask_n = offs_n < N
 
@@ -78,7 +77,15 @@ def fp8_gemm_kernel(
 
 def dequantize_weights(q_weight: torch.Tensor, scale: torch.Tensor, block_size=16) -> torch.Tensor:
     """
-    Dequantizes FP8 weights with scaling.
+    Dequantizes FP8 weights using provided scaling factors.
+
+    Args:
+        q_weight (torch.Tensor): Quantized weight matrix (e.g. float8).
+        scale (torch.Tensor): Scaling factors.
+        block_size (int): Block size used in the kernel.
+
+    Returns:
+        torch.Tensor: Dequantized weight matrix (float32).
     """
     assert q_weight.shape == scale.shape, "Mismatched shapes between quantized weights and scales."
 
@@ -99,7 +106,15 @@ def dequantize_weights(q_weight: torch.Tensor, scale: torch.Tensor, block_size=1
 
 def fp8_gemm(a: torch.Tensor, b: torch.Tensor, block_size=16) -> torch.Tensor:
     """
-    Performs FP8 GEMM (a @ b) with Triton.
+    Performs GEMM on FP8 dequantized matrices using Triton.
+
+    Args:
+        a (torch.Tensor): Left matrix (float32).
+        b (torch.Tensor): Right matrix (float32).
+        block_size (int): Block size for tiling.
+
+    Returns:
+        torch.Tensor: Output matrix (float32).
     """
     assert a.shape[1] == b.shape[0], "Incompatible matrix dimensions."
 

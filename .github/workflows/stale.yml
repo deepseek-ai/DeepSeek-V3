@@ -1,0 +1,30 @@
+name: "Mark and close stale issues"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    if: ${{ github.repository == 'deepseek-ai/DeepSeek-V3' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Mark and close stale issues"
+        uses: actions/stale@v9
+        with:
+          days-before-issue-stale: 30
+          days-before-issue-close: 14
+          stale-issue-label: "stale"
+          close-issue-label: "closed-as-stale"
+          exempt-issue-labels: |
+            pinned
+            security
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it has not had
+            recent activity. It will be closed if no further activity occurs. If you
+            believe this issue is still relevant, please leave a comment to keep it open.
+            Thank you for your contributions!
+          close-issue-message: false
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
