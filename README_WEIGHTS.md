@@ -2,30 +2,30 @@
 
 ## New Fields in `config.json`
 
-- **model_type**: Specifies the model type, which is updated to `deepseek_v3` in this release.
-- **num_nextn_predict_layers**: Indicates the number of Multi-Token Prediction (MTP) Modules. The open-sourced V3 weights include **1 MTP Module** .
-- **quantization_config**: Describes the configuration for FP8 quantization.
+- **model_type**: Specifies the model type, which is now set to `deepseek_v3` in this release.
+- **num_nextn_predict_layers**: Defines the number of Multi-Token Prediction (MTP) Modules. The open-sourced V3 weights contain **1 MTP Module**.
+- **quantization_config**: Details the configuration for FP8 quantization.
 
 ---
 
-## Weight Structure Overview
+## Weight File Structure Overview
 
-The DeepSeek-V3 weight file consists of two main components: **Main Model Weights** and **MTP Modules**.
+The DeepSeek-V3 weight file is divided into two primary components: **Main Model Weights** and **MTP Modules**.
 
 ### 1. Main Model Weights
 
 - **Composition**:
-  - Input/output embedding layers and a complete set of 61 Transformer hidden layers.
+  - Includes input/output embedding layers and a full set of 61 Transformer hidden layers.
 - **Parameter Count**:
   - Total parameters: **671B**
-  - Activation parameters: **36.7B** (including 0.9B for Embedding and 0.9B for the output Head).
+  - Activation parameters: **36.7B** (which includes 0.9B for Embedding and 0.9B for the Output Head).
 
 #### Structural Details
 
 - **Embedding Layer**:
   - `model.embed_tokens.weight`
 - **Transformer Hidden Layers**:
-  - `model.layers.0` to `model.layers.60`, totaling `num_hidden_layers` layers.
+  - From `model.layers.0` to `model.layers.60`, which correspond to `num_hidden_layers` layers.
 - **Output Layer**:
   - `model.norm.weight`
   - `lm_head.weight`
@@ -33,37 +33,37 @@ The DeepSeek-V3 weight file consists of two main components: **Main Model Weight
 ### 2. Multi-Token Prediction (MTP) Modules
 
 - **Composition**:
-  - Additional MTP Modules defined by the `num_nextn_predict_layers` field. In this model, the value is set to 1.
+  - These modules are determined by the `num_nextn_predict_layers` parameter. In this model, the value is set to 1.
 - **Parameter Count**:
-  - Parameters: **11.5B unique parameters**, excluding the shared 0.9B Embedding and 0.9B output Head).
-  - Activation parameters: **2.4B** (including the shared 0.9B Embedding and 0.9B output Head).
+  - Parameters: **11.5B unique parameters** (excluding the shared 0.9B Embedding and 0.9B Output Head).
+  - Activation parameters: **2.4B** (including the shared 0.9B Embedding and 0.9B Output Head).
 
 #### Structural Details
 
-- **embed_tokens**: **Shares parameters** with the Embedding layer of the Main Model weights.
-- **enorm & hnorm**: RMSNorm parameters required for speculative decoding.
-- **eh_proj**: Parameters for dimensionality reduction projection on the norm results.
+- **embed_tokens**: **Shares parameters** with the Main Model’s Embedding layer.
+- **enorm & hnorm**: RMSNorm parameters used for speculative decoding.
+- **eh_proj**: Parameters used for dimensionality reduction of the normalized outputs.
 - **Additional Transformer Hidden Layer**:
-  - `model.layers.61.self_attn & mlp` (structure identical to the Main Model hidden layers).
-- **shared_head**: **Shares parameters** with the output Head of the Main Model weights.
+  - `model.layers.61.self_attn & mlp` (these are structured the same as the Main Model hidden layers).
+- **shared_head**: **Shares parameters** with the Output Head of the Main Model.
 
 ---
 
-### Loading Rules
+### Layer Loading Rules
 
-- **Main Model Weights**: Loaded via the `num_hidden_layers` parameter in `config.json`.
-- **MTP Modules**: Loaded via the `num_nextn_predict_layers` parameter, with layer IDs appended immediately after the Main Model hidden layers. For example:
-  - If `num_hidden_layers = 61` and `num_nextn_predict_layers = 1`, the MTP Module's layer ID is `61`.
+- **Main Model Weights**: These are loaded according to the `num_hidden_layers` field in `config.json`.
+- **MTP Modules**: These are loaded using the `num_nextn_predict_layers` field, with MTP layer IDs appended directly after the Main Model’s hidden layers. For example:
+  - With `num_hidden_layers = 61` and `num_nextn_predict_layers = 1`, the MTP Module layer ID will be `61`.
 
 ---
 
 ## FP8 Weight Documentation
 
-DeepSeek-V3 natively supports FP8 weight format with 128x128 block scaling.
+DeepSeek-V3 natively supports the FP8 weight format with 128x128 block scaling.
 
 ### FP8 Configuration
 
-The FP8 weight file introduces a `quantization_config` field to describe the quantization method. Below is an example configuration:
+The FP8 weight file introduces a `quantization_config` field, which defines the quantization method. Below is an example of the configuration:
 
 ```json
 "quantization_config": {
@@ -75,20 +75,18 @@ The FP8 weight file introduces a `quantization_config` field to describe the qua
 ```
 
 - **Quantization Format**:
-  - Format type: `fp8` and `e4m3` (corresponding to `torch.float8_e4m3fn`).
+  - Format type: `fp8` and `e4m3` (aligned with `torch.float8_e4m3fn`).
   - Weight block size: `128x128`.
 - **Activation Quantization Scheme**:
-  - Utilizes dynamic activation quantization (`dynamic`).
+  - Uses dynamic activation quantization (`dynamic`).
 
 ### Dequantization Method
 
 The FP8 weight file includes a `weight_scale_inv` field, which stores the dequantization scale for each weight block.
 
-- **Storage Format**: `float32 Tensor`, stored alongside the weight data.
+- **Storage Format**: Stored as a `float32 Tensor`, alongside the weight data.
 - **Dequantization Formula**:
-  - If the weight block is not aligned to 128, it is zero-padded to 128 before calculating the scale. After quantization, the padded portion is removed.
-  - The dequantization process is performed as: `(128x128 weight block) * weight_scale_inv`.
+  - If a weight block is not aligned to 128, it is zero-padded to 128 before calculating the scale. The padded portion is discarded after quantization.
+  - Dequantization is performed using the formula: `(128x128 weight block) * weight_scale_inv`.
 
-Through dequantization of the FP8 weights, runtime operations enable online quantization at a granularity of `per-token-per-128-channel`.
-
----
+This dequantization process enables runtime operations to apply online quantization on a per-token, per-128-channel basis.
