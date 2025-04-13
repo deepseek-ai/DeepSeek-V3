@@ -30,7 +30,7 @@ mapping = {
 }
 
 
-def main(hf_ckpt_path, save_path, n_experts, mp):
+def main(hf_ckpt_path: str, save_path: str, n_experts: str, mp: int) -> None:
     """
     Converts and saves model checkpoint files into a specified format.
 
