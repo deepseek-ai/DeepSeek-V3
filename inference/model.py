@@ -392,7 +392,7 @@ def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
 
 class MLA(nn.Module):
     """
-    Multi-Headed Attention Layer (MLA).
+    Multi-Head Latent Attention (MLA) Layer.
 
     Attributes:
         dim (int): Dimensionality of the input features.
@@ -442,7 +442,7 @@ class MLA(nn.Module):
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]):
         """
-        Forward pass for the Multi-Headed Attention Layer (MLA).
+        Forward pass for the Multi-Head Latent Attention (MLA) Layer.
 
         Args:
             x (torch.Tensor): Input tensor of shape (batch_size, seq_len, dim).
