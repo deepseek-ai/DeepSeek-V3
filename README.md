@@ -322,7 +322,7 @@ For comprehensive step-by-step instructions on running DeepSeek-V3 with LMDeploy
 
 ### 6.4 Inference with TRT-LLM (recommended)
 
-[TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) now supports the DeepSeek-V3 model, offering features like FP8/[FP4](https://huggingface.co/nvidia/DeepSeek-R1-FP4) precision, Tensor Parallelism/Expert Parallelism for MoE/Data Parallelism for attention, Multi-Token Prediction etc. You can refer to this [README](https://github.com/NVIDIA/TensorRT-LLM/blob/main/examples/models/core/deepseek_v3/README.md) page for detailed instructions on usage, as well as this [blog](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docs/source/blogs/Best_perf_practice_on_DeepSeek-R1_in_TensorRT-LLM.md) page for guidance on how to get best performance.
+[TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) now supports the DeepSeek-V3 model in its re-architected [PyTorch backend](https://nvidia.github.io/TensorRT-LLM/torch.html), offering features like FP8/[FP4](https://huggingface.co/nvidia/DeepSeek-R1-FP4) precision, Tensor Parallelism/Expert Parallelism for MoE/Data Parallelism for attention, Multi-Token Prediction etc. You can refer to this [README](https://github.com/NVIDIA/TensorRT-LLM/blob/main/examples/models/core/deepseek_v3/README.md) page for detailed instructions on usage, as well as this [blog](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docs/source/blogs/Best_perf_practice_on_DeepSeek-R1_in_TensorRT-LLM.md) page for guidance on how to get best performance.
 
 
 ### 6.5 Inference with vLLM (recommended)
