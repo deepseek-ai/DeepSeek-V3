@@ -20,7 +20,7 @@
 
 ## Overview
 
-This document outlines the architecture for implementing DeepSeek V3 in the Zig programming language. The focus is on leveraging Zig's unique features to create a high-performance, memory-efficient, and robust implementation of the DeepSeek V3 architecture. 
+This document outlines the initial architecture proposal for implementing DeepSeek V3 in the Zig programming language. The focus is on leveraging Zig's unique features to create a high-performance, memory-efficient, and robust implementation of the DeepSeek V3 architecture. 
 
 1. **Superior Performance**: Leverage Zig's compile-time metaprogramming, SIMD vectorization, and low-level control to achieve optimal performance across platforms
 2. **Memory Efficiency**: Utilize Zig's explicit allocator system and arena allocation patterns for precise resource management
