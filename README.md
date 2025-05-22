@@ -31,27 +31,49 @@ This document outlines the initial architecture proposal for implementing DeepSe
 ## Table of Contents
 1. [Overview](#overview)
 2. [System Architecture](#system-architecture)
-3. [Component Design](#component-design)
-    1. [Core System](#core-system)
-        1. [Memory Management System](#memory-management-system)
-        2. [Tensor Implementation](#tensor-implementation)
-        3. [Error Handling Framework](#error-handling-framework)
-        4. [Concurrency Model](#concurrency-model)
-    2. [Model Architecture](#model-architecture)
-        1. [Transformer Core](#transformer-core)
-        2. [Attention Mechanisms](#attention-mechanisms)
-        3. [Mixture of Experts (MoE)](#mixture-of-experts-moe)
-    3. [Computation Backend](#computation-backend)
-        1. [Backend Interface](#backend-interface)
-        2. [Metal Integration for Apple Silicon](#metal-integration-for-apple-silicon)
-    4. [Inference Pipeline](#inference-pipeline)
-        1. [Model Loading](#model-loading)
-        2. [Generation Strategies](#generation-strategies)
-    5. [Optimization Layer](#optimization-layer)
-        1. [Compile-Time Optimizations](#compile-time-optimizations)
-        2. [Quantization Framework](#quantization-framework)
+   - [High-Level Component Overview](#high-level-component-overview)
+3. [Detailed Component Design](#detailed-component-design)
+   1. [Core Systems](#1-core-systems)
+      - [1.1 Memory Management System](#11-memory-management-system)
+      - [1.2 Tensor Implementation](#12-tensor-implementation)
+      - [1.3 Error Handling Framework](#13-error-handling-framework)
+      - [1.4 Concurrency Model](#14-concurrency-model)
+   2. [Model Architecture](#2-model-architecture)
+      - [2.1 Transformer Core](#21-transformer-core)
+      - [2.2 Attention Mechanism](#22-attention-mechanism)
+      - [2.3 Mixture of Experts (MoE)](#23-mixture-of-experts-moe)
+   3. [Computation Backend](#3-computation-backend)
+      - [3.1 Backend Interface](#31-backend-interface)
+      - [3.2 Cross-Platform Compilation](#32-cross-platform-compilation)
+        - [3.2.1 Cross-Compilation Support](#321-cross-compilation-support)
+        - [3.2.2 C ABI Compatibility](#322-c-abi-compatibility)
+      - [3.3 Platform-Specific Implementations](#33-platform-specific-implementations)
+      - [3.4 SIMD Vectorization](#34-simd-vectorization)
+      - [3.5 Runtime CPU Feature Detection](#35-runtime-cpu-feature-detection)
+      - [3.6 Backend Configuration](#36-backend-configuration)
+      - [3.7 GPU Integration](#37-gpu-integration)
+        - [3.7.1 CUDA Backend](#371-cuda-backend)
+        - [3.7.2 Vulkan Backend](#372-vulkan-backend)
+      - [3.8 Quantization Framework](#38-quantization-framework)
+      - [3.9 Memory Management](#39-memory-management)
+      - [3.10 Metal Integration for Apple Silicon](#310-metal-integration-for-apple-silicon)
+   4. [Inference Pipeline](#4-inference-pipeline)
+      - [4.1 Model Loading](#41-model-loading)
+      - [4.2 Generation Strategies](#42-generation-strategies)
+   5. [Optimization Layer](#5-optimization-layer)
+      - [5.1 Compile-Time Optimizations](#51-compile-time-optimizations)
+      - [5.2 Quantization Framework](#52-quantization-framework)
 4. [Platform-Specific Optimizations](#platform-specific-optimizations)
+   - [Apple Silicon (M-Series)](#apple-silicon-m-series)
+   - [x86_64 Architecture](#x86_64-architecture)
+   - [NVIDIA GPUs](#nvidia-gpus)
 5. [Development Roadmap](#development-roadmap)
+   - [Phase 1: Core Infrastructure](#phase-1-core-infrastructure)
+   - [Phase 2: Model Architecture](#phase-2-model-architecture)
+   - [Phase 3: Backend Integration](#phase-3-backend-integration)
+   - [Phase 4: Inference Pipeline](#phase-4-inference-pipeline)
+   - [Phase 5: Optimization](#phase-5-optimization)
+   - [Phase 6: Testing and Benchmarking](#phase-6-testing-and-benchmarking)
 6. [Why Propose DeepSeek V3 in Zig?](#why-propose-deepseek-v3-in-zig)
 
 ## System Architecture
@@ -158,6 +180,27 @@ pub const TensorAllocator = struct {
         _ = self.gpa.deinit();
         // backing allocator will free self
     }
+
+    // Create a stack fallback allocator for small tensors that can be stack-allocated
+    pub fn smallTensorAllocator(self: *TensorAllocator, comptime size: usize) std.heap.StackFallbackAllocator(size) {
+        return std.heap.stackFallbackAllocator(size, self.arena.allocator());
+    }
+    
+    // Get a leak-detecting allocator for debugging builds
+    pub fn debugAllocator(self: *TensorAllocator) std.mem.Allocator {
+        if (builtin.mode == .Debug) {
+            return self.gpa.allocator();  // GPA tracks leaks in debug mode
+        } else {
+            return self.persistentAllocator();
+        }
+    }
+    
+    // Specialized allocator for model weights that need to be memory-mapped
+    pub fn weightAllocator(self: *TensorAllocator, path: []const u8) !std.mem.Allocator {
+        // In real implementation, this would return a memory-mapped allocator
+        // For now, just use the persistent allocator
+        return self.persistentAllocator();
+    }
     
     // Get the right allocator for specific tensor use cases
     pub fn temporaryAllocator(self: *TensorAllocator) std.mem.Allocator {
@@ -211,15 +254,21 @@ pub fn Tensor(comptime DataType: type, comptime dimensions: usize) type {
         
         // Vector types for SIMD operations based on hardware capabilities
         pub const VecType = switch (DataType) {
-            f32 => if (@hasDecl(builtin, "cpu") and @hasDecl(builtin.cpu, "avx")) 
-                      @Vector(8, f32)  // AVX
-                  else if (@hasDecl(builtin, "cpu") and @hasDecl(builtin.cpu, "sse")) 
-                      @Vector(4, f32)  // SSE
+            f32 => if (std.Target.x86.featureSetHas(builtin.cpu.features, .avx512f)) 
+                      @Vector(16, f32)  // AVX-512
+                  else if (std.Target.x86.featureSetHas(builtin.cpu.features, .avx2)) 
+                      @Vector(8, f32)   // AVX2
+                  else if (std.Target.x86.featureSetHas(builtin.cpu.features, .sse4_1)) 
+                      @Vector(4, f32)   // SSE4.1
                   else 
-                      @Vector(4, f32),  // Fallback
-            f16 => @Vector(8, f16),
+                      @Vector(4, f32),  // Fallback for non-x86 or basic x86
+            f16 => if (std.Target.aarch64.featureSetHas(builtin.cpu.features, .fp16)) 
+                      @Vector(8, f16)   // ARM with FP16 support
+                  else 
+                      @Vector(4, f16),  // Default for f16
             i32 => @Vector(8, i32),
             i8 => @Vector(16, i8),
+            i4 => @Vector(32, i4),     // Support for 4-bit quantization
             else => @compileError("Unsupported data type for SIMD"),
         };
         
@@ -468,6 +517,11 @@ const ModelError = error{
     TensorShapeMismatch,
     QuantizationError,
     InvalidConfiguration,
+    ModelTooLarge,
+    UnsupportedArchitecture,
+    InvalidTokenization,
+    ContextLengthExceeded,
+    DeviceMemoryExhausted,
 };
 
 // Union error sets for comprehensive error handling
@@ -525,7 +579,39 @@ pub fn main() !void {
     };
     defer model.deinit();
     
+    // Example of handling errors with fallbacks
+    const modelVersion = getModelVersion(model.path) catch |err| switch (err) {
+        ModelError.InvalidConfiguration => "unknown",
+        else => return err,
+    };
+    
+    // Example of collecting and reporting multiple errors
+    var errors = std.ArrayList(ModelError).init(allocator);
+    defer errors.deinit();
+    
+    if (validateModelStructure(model)) |_| {
+        // Structure is valid
+    } else |err| {
+        try errors.append(err);
+    }
+    
+    if (validateModelWeights(model)) |_| {
+        // Weights are valid
+    } else |err| {
+        try errors.append(err);
+    }
+    
+    if (errors.items.len > 0) {
+        std.debug.print("Found {d} errors in model validation\n", .{errors.items.len});
+        return ModelError.InvalidConfiguration;
+    }
+    
     // Continue with model usage...
+    try initializeModelBackend(model);
+    
+    std.debug.print("Model version: {s} loaded successfully\n", .{modelVersion});
+    std.debug.print("Model has {d} parameters, {d} activated\n", 
+        .{model.totalParameters(), model.activatedParameters()});
 }
 ```
 
@@ -580,6 +666,54 @@ pub const ComputeThreadPool = struct {
         }
     }
 };
+
+// Note: Zig's async/await is still under development and may change
+// This example shows the current Thread.Pool-based approach which is stable
+// Future versions may leverage async/await for more elegant concurrency
+
+// Example of how we might use async in the future when it's stable
+pub fn asyncMatMulExample(allocator: std.mem.Allocator, a: *Tensor(f32, 2), b: *Tensor(f32, 2)) !*Tensor(f32, 2) {
+    // This is an example of potential future API design
+    // Not recommended for production use until async is stabilized
+    
+    const M = a.shape[0];
+    const K = a.shape[1];
+    const N = b.shape[1];
+    
+    var result = try Tensor(f32, 2).init(allocator, .{M, N});
+    errdefer result.deinit();
+    
+    @memset(result.data, 0);
+    
+    // Process rows concurrently
+    var row_jobs = try allocator.alloc(@Frame(processRow), M);
+    defer allocator.free(row_jobs);
+    
+    for (0..M) |i| {
+        row_jobs[i] = async processRow(i, a, b, &result);
+    }
+    
+    // Wait for all rows to complete
+    for (row_jobs) |*job| {
+        await job;
+    }
+    
+    return result;
+}
+
+fn processRow(row: usize, a: *Tensor(f32, 2), b: *Tensor(f32, 2), result: *Tensor(f32, 2)) !void {
+    // Process a single row of the matrix multiplication
+    const K = a.shape[1];
+    const N = b.shape[1];
+    
+    for (0..N) |j| {
+        var sum: f32 = 0.0;
+        for (0..K) |k| {
+            sum += a.at(.{row, k}) * b.at(.{k, j});
+        }
+        try result.set(.{row, j}, sum);
+    }
+}
 
 // Parallel tensor operation example with async/await
 pub fn parallelMatMul(allocator: std.mem.Allocator, a: *Tensor(f32, 2), b: *Tensor(f32, 2)) !*Tensor(f32, 2) {
@@ -700,7 +834,7 @@ pub const DataType = enum {
 pub const ModelArgs = struct {
     // Core model parameters
     max_batch_size: usize = 8,
-    max_seq_len: usize = 4096 * 4,
+    max_seq_len: usize = 4096 * 32,  // 128K context window
     data_type: DataType = .bf16,
     vocab_size: usize = 102400,
     dim: usize = 2048,
@@ -738,6 +872,13 @@ pub const ModelArgs = struct {
     use_flash_attention: bool = true,   // Use optimized attention implementation
     use_parallel_experts: bool = true,  // Run experts in parallel
     max_token_limit: ?usize = null,     // Optional token generation limit
+    enable_kv_cache: bool = true,       // Use KV cache for inference
+    use_multi_token_prediction: bool = false, // Enable multi-token prediction
+    
+    // Hardware optimization flags
+    target_specific_optimizations: bool = true, // Enable target-specific optimizations
+    enable_low_precision_computation: bool = true, // Enable mixed-precision computation
+    use_tensor_cores: bool = true,     // Use tensor cores if available
     
     // Generate optimized implementations based on config parameters
     pub fn getModelType(self: @This()) type {
@@ -764,7 +905,33 @@ pub const ModelArgs = struct {
             pub const layer_config = struct {
                 pub const head_dim = (config.dim / config.n_heads);
                 pub const moe_layers_start = config.n_dense_layers;
+                pub const total_params = calculateTotalParameters(config);
+                pub const activated_params = calculateActivatedParameters(config);
             };
+            
+            fn calculateTotalParameters(config: ModelArgs) usize {
+                // This would be a more detailed calculation in reality
+                const embedding_params = config.vocab_size * config.dim;
+                const attention_params = config.n_layers * (config.dim * config.dim * 4);
+                const moe_params = (config.n_layers - config.n_dense_layers) * 
+                                   config.n_routed_experts * 
+                                   (config.dim * config.moe_inter_dim * 2);
+                const dense_ffn_params = config.n_dense_layers * (config.dim * config.inter_dim * 2);
+                
+                return embedding_params + attention_params + moe_params + dense_ffn_params;
+            }
+            
+            fn calculateActivatedParameters(config: ModelArgs) usize {
+                // This would be a more detailed calculation in reality
+                const embedding_params = config.vocab_size * config.dim;
+                const attention_params = config.n_layers * (config.dim * config.dim * 4);
+                const moe_activated_params = (config.n_layers - config.n_dense_layers) * 
+                                           config.n_activated_experts * 
+                                           (config.dim * config.moe_inter_dim * 2);
+                const dense_ffn_params = config.n_dense_layers * (config.dim * config.inter_dim * 2);
+                
+                return embedding_params + attention_params + moe_activated_params + dense_ffn_params;
+            }
         };
     }
 };
@@ -1968,39 +2135,201 @@ Outlining the computation backend architecture for the DeepSeek-V3 project imple
 The backend interface provides a unified abstraction layer for all computation targets while maintaining Zig's zero-cost abstraction philosophy.
 
 ```zig
+pub const ComputeError = error{
+    MatrixDimensionMismatch,
+    OutOfMemory,
+    UnsupportedOperation,
+    HardwareAccelerationFailed,
+    DeviceError,
+    InvalidParameter,
+    UnsupportedDataType,
+    KernelExecutionFailed,
+    QuantizationError,
+};
+
 pub const ComputeBackend = struct {
     const Self = @This();
     
-    // Function pointers for backend-specific operations with proper type safety
-    matmulFn: *const fn(a: anytype, b: anytype, c: *anytype, allocator: std.mem.Allocator) anyerror!void,
-    softmaxFn: *const fn(x: anytype, dim: usize, allocator: std.mem.Allocator) anyerror!void,
-    rmsnormFn: *const fn(x: anytype, weight: anytype, eps: f32, allocator: std.mem.Allocator) anyerror!void,
-    attentionFn: *const fn(q: anytype, k: anytype, v: anytype, mask: ?anytype, scale: f32, allocator: std.mem.Allocator) anyerror!void,
-    // Other operations...
+    // Function pointers for backend operations
+    matmulFn: *const fn(a: anytype, b: anytype, c: *anytype, allocator: std.mem.Allocator) ComputeError!void,
+    addFn: *const fn(a: anytype, b: anytype, c: *anytype, allocator: std.mem.Allocator) ComputeError!void,
+    activationFn: *const fn(x: anytype, y: *anytype, act_type: ActivationType, allocator: std.mem.Allocator) ComputeError!void,
+    softmaxFn: *const fn(x: anytype, y: *anytype, dim: ?usize, allocator: std.mem.Allocator) ComputeError!void,
     
-    // Configuration for the backend
-    config: BackendConfig,
+    // Device management
+    initDeviceFn: *const fn(device_id: ?usize) ComputeError!void,
+    releaseDeviceFn: *const fn() void,
     
-    // Dispatch based on backend type with proper error handling
-    pub fn matmul(self: *const Self, a: anytype, b: anytype, c: *anytype, allocator: std.mem.Allocator) !void {
-        return self.matmulFn(a, b, c, allocator);
+    // Memory management
+    allocateDeviceMemoryFn: *const fn(size: usize) ComputeError!*anyopaque,
+    freeDeviceMemoryFn: *const fn(ptr: *anyopaque) void,
+    copyHostToDeviceFn: *const fn(host_ptr: *const anyopaque, device_ptr: *anyopaque, size: usize) ComputeError!void,
+    copyDeviceToHostFn: *const fn(device_ptr: *const anyopaque, host_ptr: *anyopaque, size: usize) ComputeError!void,
+    
+    // Backend info
+    getBackendInfoFn: *const fn() BackendInfo,
+    
+    // Backend factory functions
+    pub fn createCpuBackend(config: CpuBackendConfig) !*Self {
+        const allocator = config.allocator orelse std.heap.page_allocator;
+        
+        var backend = try allocator.create(Self);
+        errdefer allocator.destroy(backend);
+        
+        backend.* = .{
+            .matmulFn = if (config.use_simd) simdMatmul else scalarMatmul,
+            .addFn = if (config.use_simd) simdAdd else scalarAdd,
+            .activationFn = genericActivation,
+            .softmaxFn = genericSoftmax,
+            .initDeviceFn = initCpuDevice,
+            .releaseDeviceFn = releaseCpuDevice,
+            .allocateDeviceMemoryFn = allocateCpuMemory,
+            .freeDeviceMemoryFn = freeCpuMemory,
+            .copyHostToDeviceFn = cpuMemcpy,
+            .copyDeviceToHostFn = cpuMemcpy,
+            .getBackendInfoFn = getCpuBackendInfo,
+        };
+        
+        return backend;
     }
     
-    pub fn softmax(self: *const Self, x: anytype, dim: usize, allocator: std.mem.Allocator) !void {
-        return self.softmaxFn(x, dim, allocator);
+    pub fn createMetalBackend(config: MetalBackendConfig) !*Self {
+        // Implementation details for Metal backend would go here
+        @compileError("Metal backend not implemented yet");
     }
     
-    pub fn rmsnorm(self: *const Self, x: anytype, weight: anytype, eps: f32, allocator: std.mem.Allocator) !void {
-        return self.rmsnormFn(x, weight, eps, allocator);
-    }
-    
-    pub fn attention(self: *const Self, q: anytype, k: anytype, v: anytype, mask: ?anytype, scale: f32, allocator: std.mem.Allocator) !void {
-        return self.attentionFn(q, k, v, mask, scale, allocator);
+    pub fn createCudaBackend(config: CudaBackendConfig) !*Self {
+        // Implementation details for CUDA backend would go here
+        @compileError("CUDA backend not implemented yet");
     }
 };
 ```
 
-#### 3.2 Platform-Specific Implementations
+#### 3.2 Cross-Platform Compilation
+
+One of the key advantages of implementing DeepZig V3 in Zig is the language's exceptional cross-compilation capabilities. Zig includes the compiler and standard libraries for all supported targets, making it trivial to compile for different platforms without additional toolchains.
+
+#### 3.2.1 Cross-Compilation Support
+
+```zig
+// Example of how to build for different target platforms
+pub fn build(b: *std.Build) void {
+    // Standard x86_64 Linux build
+    const linux_x86_64 = b.standardTargetOptions(.{
+        .default_target = .{
+            .cpu_arch = .x86_64,
+            .os_tag = .linux,
+            .cpu_features_add = std.Target.x86.Feature.avx2_featureset,
+        },
+    });
+    
+    // Apple Silicon build
+    const macos_aarch64 = b.standardTargetOptions(.{
+        .default_target = .{
+            .cpu_arch = .aarch64,
+            .os_tag = .macos,
+            .cpu_features_add = std.Target.aarch64.Feature.apple_a14_featureset,
+        },
+    });
+    
+    // Windows x86_64 build
+    const windows_x86_64 = b.standardTargetOptions(.{
+        .default_target = .{
+            .cpu_arch = .x86_64,
+            .os_tag = .windows,
+            .abi = .msvc,
+        },
+    });
+    
+    // WASM build for browser deployment
+    const wasm = b.standardTargetOptions(.{
+        .default_target = .{
+            .cpu_arch = .wasm32,
+            .os_tag = .freestanding,
+        },
+    });
+    
+    // Create libs/executables for each target
+    createBuild(b, linux_x86_64, "linux-x86_64");
+    createBuild(b, macos_aarch64, "macos-arm64");
+    createBuild(b, windows_x86_64, "windows-x86_64");
+    createBuild(b, wasm, "web");
+}
+
+fn createBuild(b: *std.Build, target: std.zig.CrossTarget, name: []const u8) void {
+    // Create optimized and debug builds
+    const optimize = b.standardOptimizeOption(.{});
+    
+    // Create library
+    const lib = b.addStaticLibrary(.{
+        .name = std.fmt.allocPrint(
+            b.allocator, 
+            "deepzig-{s}", 
+            .{name}
+        ) catch unreachable,
+        .root_source_file = .{ .path = "src/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    
+    // Install in the appropriate location
+    b.installArtifact(lib);
+    
+    // Create a CLI tool using the library
+    const exe = b.addExecutable(.{
+        .name = std.fmt.allocPrint(
+            b.allocator, 
+            "deepzig-cli-{s}", 
+            .{name}
+        ) catch unreachable,
+        .root_source_file = .{ .path = "src/cli.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    
+    exe.linkLibrary(lib);
+    b.installArtifact(exe);
+}
+```
+
+#### 3.2.2 C ABI Compatibility
+
+DeepZig V3 leverages Zig's seamless interoperability with C to interface with existing ML libraries:
+
+```zig
+// Example of interfacing with C libraries
+const c = @cImport({
+    @cInclude("cublas_v2.h");  // For NVIDIA GPU acceleration
+    @cInclude("mkl.h");        // For Intel CPU optimization
+});
+
+pub fn createOptimizedBackend() !*ComputeBackend {
+    // Try to use hardware-specific libraries in order of preference
+    if (hasCudaSupport()) {
+        return createCudaBackend();
+    } else if (hasMklSupport()) {
+        return createMklBackend();
+    } else {
+        return createNativeBackend();
+    }
+}
+
+fn hasCudaSupport() bool {
+    // Check if CUDA is available
+    var device_count: c_int = 0;
+    const status = c.cudaGetDeviceCount(&device_count);
+    return (status == c.cudaSuccess and device_count > 0);
+}
+
+fn hasMklSupport() bool {
+    // Check if MKL is available
+    return c.mkl_get_version(null) != 0;
+}
+```
+
+This cross-platform approach ensures DeepZig V3 can run efficiently on virtually any hardware platform, from high-end GPU servers to consumer devices, with appropriate performance optimizations for each target.
+
+#### 3.3 Platform-Specific Implementations
 
 ```zig
 pub const CPUBackend = struct {
@@ -2102,7 +2431,7 @@ pub const MetalBackend = struct {
 - Pipeline caching for improved performance
 
 
-#### 3.3 SIMD Vectorization
+#### 3.4 SIMD Vectorization
 
 DeepSeek-V3 leverages Zig's built-in vector types to achieve high-performance computation across different architectures.
 
@@ -2191,7 +2520,7 @@ pub fn matrixMultiplySIMD(comptime T: type, a: []const T, b: []const T, c: []T, 
 }
 ```
 
-#### 3.4 Runtime CPU Feature Detection
+#### 3.5 Runtime CPU Feature Detection
 
 ```zig
 pub fn detectCpuFeatures() BackendConfig {
@@ -2215,7 +2544,7 @@ pub fn detectCpuFeatures() BackendConfig {
 }
 ```
 
-#### 3.5 Backend Configuration
+#### 3.6 Backend Configuration
 
 Backend configuration allows fine-tuning performance characteristics based on hardware capabilities and workload requirements.
 
@@ -2250,11 +2579,11 @@ pub const BackendConfig = struct {
 };
 ```
 
-#### 3.6 GPU Integration
+#### 3.7 GPU Integration
 
 DeepSeek-V3 supports multiple GPU backends, with specialized implementations for each platform.
 
-#### 3.6.1 CUDA Backend
+#### 3.7.1 CUDA Backend
 
 ```zig
 pub const CudaBackend = struct {
@@ -2304,7 +2633,7 @@ pub const CudaBackend = struct {
 };
 ```
 
-#### 3.6.2 Vulkan Backend
+#### 3.7.2 Vulkan Backend
 
 ```zig
 pub const VulkanBackend = struct {
@@ -2338,7 +2667,7 @@ pub const VulkanBackend = struct {
 };
 ```
 
-#### 3.7 Quantization Framework
+#### 3.8 Quantization Framework
 
 The quantization framework enables efficient model deployment through reduced precision arithmetic.
 
@@ -2388,7 +2717,7 @@ pub const Quantizer = struct {
 };
 ```
 
-#### 3.8 Memory Management
+#### 3.9 Memory Management
 
 Efficient memory management is crucial for large language model inference.
 
@@ -2477,7 +2806,7 @@ pub const KVCache = struct {
 };
 ```
 
-#### 3.9 Metal Integration for Apple Silicon
+#### 3.10 Metal Integration for Apple Silicon
 
 Modern Apple Silicon devices offer exceptional compute performance, and our Zig implementation takes full advantage of these capabilities through direct Metal API integration:
 
@@ -4596,20 +4925,35 @@ Key advantages of the Zig implementation include:
    - Compile-time specialization eliminates runtime overhead
    - Direct hardware access for maximum efficiency
    - Zero-cost abstractions for clean yet fast code
+   - SIMD vectorization through native vector types
+   - Cache-aware memory layout optimization
 
 2. **Memory Efficiency**
    - Explicit allocation strategies tailored to LLM workloads
-   - Reduced memory fragmentation
-   - Lower overall memory footprint
+   - Reduced memory fragmentation through custom allocators
+   - Lower overall memory footprint through data structure optimization
+   - Precise control over tensor memory layouts
+   - Arena allocation for temporary computations
 
 3. **Reliability**
-   - Comprehensive error handling
-   - No runtime exceptions
-   - Deterministic resource cleanup
+   - Comprehensive error handling with explicit error sets
+   - No runtime exceptions, all errors are explicitly handled
+   - Deterministic resource cleanup through defer and errdefer
+   - Compile-time correctness guarantees
+   - Clear separation of error paths from happy paths
 
 4. **Portability**
-   - Cross-platform support with optimized backends
+   - Integrated cross-compilation for all supported platforms
+   - No external dependencies for core functionality
+   - C ABI compatibility for integration with existing libraries
    - Consistent behavior across environments
-   - Single codebase for all target platforms
+   - WebAssembly target support for browser deployment
+
+5. **Scalability**
+   - Explicit threading model for compute-intensive operations
+   - Efficient parallel execution of independent tensor operations
+   - Multi-token prediction support
+   - Quantization-aware data structures
+   - Optimized KV-cache for efficient sequence generation
 
 The resulting system will be particularly well-suited for deployment on resource-constrained devices and will provide superior performance on all platforms. This architectural approach sets the foundation for future innovations in large language model deployment.
