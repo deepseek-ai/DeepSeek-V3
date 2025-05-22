@@ -16,7 +16,7 @@
 </div>
 <hr />
 
-<h1 align="center"> DeepSeek V3 in Zig: `DeepZig V3` Proposal </h1>
+<h1 align="center"> DeepZig V3: A High-Performance LLM Architecture in Zig </h1>
 
 ## Overview
 
