@@ -28,11 +28,56 @@ This document outlines the initial architecture proposal for implementing DeepSe
 4. **Type Safety & Reliability**: Employ Zig's strong type system, comptime checks, and explicit error handling to prevent runtime errors
 5. **Cross-Platform Support**: Create a portable implementation with seamless support across architectures (x86_64, ARM64, etc.)
 
+## Why DeepSeek V3 in Zig?
+
+The migration of DeepSeek V3 to Zig represents a significant advancement in language model implementation. By leveraging Zig's unique features, particularly compile-time metaprogramming and fine-grained memory control, we aim to create a highly optimized implementation that outperforms the original Python/PyTorch version significantly while maintaining flexibility and ease of use.
+
+Key advantages of the Zig implementation include:
+
+1. **Superior Performance**
+   - Compile-time specialization eliminates runtime overhead
+   - Direct hardware access for maximum efficiency
+   - Zero-cost abstractions for clean yet fast code
+   - SIMD vectorization through native vector types
+   - Cache-aware memory layout optimization
+
+2. **Memory Efficiency**
+   - Explicit allocation strategies tailored to LLM workloads
+   - Reduced memory fragmentation through custom allocators
+   - Lower overall memory footprint through data structure optimization
+   - Precise control over tensor memory layouts
+   - Arena allocation for temporary computations
+
+3. **Reliability**
+   - Comprehensive error handling with explicit error sets
+   - No runtime exceptions, all errors are explicitly handled
+   - Deterministic resource cleanup through defer and errdefer
+   - Compile-time correctness guarantees
+   - Clear separation of error paths from happy paths
+
+4. **Portability**
+   - Integrated cross-compilation for all supported platforms
+   - No external dependencies for core functionality
+   - C ABI compatibility for integration with existing libraries
+   - Consistent behavior across environments
+   - WebAssembly target support for browser deployment
+
+5. **Scalability**
+   - Explicit threading model for compute-intensive operations
+   - Efficient parallel execution of independent tensor operations
+   - Multi-token prediction support
+   - Quantization-aware data structures
+   - Optimized KV-cache for efficient sequence generation
+
+The resulting system will be particularly well-suited for deployment on resource-constrained devices and will provide superior performance on all platforms. This architectural approach sets the foundation for future innovations in large language model deployment.
+
+
 ## Table of Contents
 1. [Overview](#overview)
-2. [System Architecture](#system-architecture)
+2. [Why DeepSeek V3 in Zig?](#why-deepseek-v3-in-zig)
+3. [System Architecture](#system-architecture)
    - [High-Level Component Overview](#high-level-component-overview)
-3. [Detailed Component Design](#detailed-component-design)
+4. [Detailed Component Design](#detailed-component-design)
    1. [Core Systems](#1-core-systems)
       - [1.1 Memory Management System](#11-memory-management-system)
       - [1.2 Tensor Implementation](#12-tensor-implementation)
@@ -63,18 +108,17 @@ This document outlines the initial architecture proposal for implementing DeepSe
    5. [Optimization Layer](#5-optimization-layer)
       - [5.1 Compile-Time Optimizations](#51-compile-time-optimizations)
       - [5.2 Quantization Framework](#52-quantization-framework)
-4. [Platform-Specific Optimizations](#platform-specific-optimizations)
+5. [Platform-Specific Optimizations](#platform-specific-optimizations)
    - [Apple Silicon (M-Series)](#apple-silicon-m-series)
    - [x86_64 Architecture](#x86_64-architecture)
    - [NVIDIA GPUs](#nvidia-gpus)
-5. [Development Roadmap](#development-roadmap)
+6. [Development Roadmap](#development-roadmap)
    - [Phase 1: Core Infrastructure](#phase-1-core-infrastructure)
    - [Phase 2: Model Architecture](#phase-2-model-architecture)
    - [Phase 3: Backend Integration](#phase-3-backend-integration)
    - [Phase 4: Inference Pipeline](#phase-4-inference-pipeline)
    - [Phase 5: Optimization](#phase-5-optimization)
    - [Phase 6: Testing and Benchmarking](#phase-6-testing-and-benchmarking)
-6. [Why Propose DeepSeek V3 in Zig?](#why-propose-deepseek-v3-in-zig)
 
 ## System Architecture
 
@@ -4914,46 +4958,3 @@ Ensuring correctness and measuring performance:
   - Performance bottleneck identification
   - Targeted optimizations
   - Final parameter tuning
-
-## Why DeepSeek V3 in Zig?
-
-The migration of DeepSeek V3 to Zig represents a significant advancement in language model implementation. By leveraging Zig's unique features, particularly compile-time metaprogramming and fine-grained memory control, we aim to create a highly optimized implementation that outperforms the original Python/PyTorch version significantly while maintaining flexibility and ease of use.
-
-Key advantages of the Zig implementation include:
-
-1. **Superior Performance**
-   - Compile-time specialization eliminates runtime overhead
-   - Direct hardware access for maximum efficiency
-   - Zero-cost abstractions for clean yet fast code
-   - SIMD vectorization through native vector types
-   - Cache-aware memory layout optimization
-
-2. **Memory Efficiency**
-   - Explicit allocation strategies tailored to LLM workloads
-   - Reduced memory fragmentation through custom allocators
-   - Lower overall memory footprint through data structure optimization
-   - Precise control over tensor memory layouts
-   - Arena allocation for temporary computations
-
-3. **Reliability**
-   - Comprehensive error handling with explicit error sets
-   - No runtime exceptions, all errors are explicitly handled
-   - Deterministic resource cleanup through defer and errdefer
-   - Compile-time correctness guarantees
-   - Clear separation of error paths from happy paths
-
-4. **Portability**
-   - Integrated cross-compilation for all supported platforms
-   - No external dependencies for core functionality
-   - C ABI compatibility for integration with existing libraries
-   - Consistent behavior across environments
-   - WebAssembly target support for browser deployment
-
-5. **Scalability**
-   - Explicit threading model for compute-intensive operations
-   - Efficient parallel execution of independent tensor operations
-   - Multi-token prediction support
-   - Quantization-aware data structures
-   - Optimized KV-cache for efficient sequence generation
-
-The resulting system will be particularly well-suited for deployment on resource-constrained devices and will provide superior performance on all platforms. This architectural approach sets the foundation for future innovations in large language model deployment.
