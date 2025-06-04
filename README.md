@@ -1,5 +1,3 @@
-# DeepSeek V3 in Zig - Project Proposal
-
 <div align="center">
   <img src="./dzv3-logo.svg" alt="DeepSeek V3 in Zig" width="100%" />
 </div>
@@ -108,6 +106,26 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 **Web Scale**: Handle concurrent requests without blocking inference
 **Accuracy**: Match PyTorch numerical precision
 
+## Platform-Specific Opportunities
+
+### Apple Silicon (M-Series)
+- **Metal Performance Shaders** integration for matrix operations
+- **AMX instruction set** access for accelerated linear algebra
+- **Unified memory architecture** exploitation for zero-copy transfers
+- **Power efficiency tuning** across P and E cores
+
+### x86_64 Architecture
+- **AVX-512 vectorization** with masked operations
+- **Cache-friendly memory layouts** for L1/L2/L3 optimization
+- **NUMA-aware allocation** and thread assignment
+- **Dynamic dispatch** based on runtime CPU feature detection
+
+### NVIDIA GPUs
+- **CUDA integration** via efficient FFI bindings
+- **Tensor Core utilization** for mixed-precision operations
+- **Custom kernels** for attention mechanisms
+- **Memory pooling** for reduced allocation overhead
+
 ## Getting Started
 
 **Current Status**: This repository contains the original Python DeepSeek V3 implementation. The Zig implementation is proposed future work.
@@ -180,4 +198,5 @@ This is an ambitious project that would benefit from expertise in:
 ---
 
 **Status**: 🎯 Seeking feedback on initial idea
+
 **Target**: Production-ready LLM inference in Zig 
