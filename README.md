@@ -59,10 +59,11 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 - `WebSocket /ws` - Streaming inference
 
 ### Deployment Vision
-- **Docker containers** for cloud deployment
-- **Static binaries** for edge devices
-- **WebAssembly** for browser inference
-- **Serverless functions** for auto-scaling
+- **Static binaries** - Single file deployment, no dependencies
+- **Direct VPS deployment** - Copy binary and run with systemd
+- **Edge devices** - ARM/RISC-V cross-compilation 
+- **Serverless functions** - Minimal cold start with static linking
+- **WebAssembly** - Browser inference without additional runtime
 
 ## Implementation Plan
 
