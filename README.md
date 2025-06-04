@@ -203,9 +203,6 @@ A: Those are inference runtimes, not development frameworks / LLM frameworks. Th
 
 ---
 
-**Status**: 🎯 Seeking feedback & idea expansion
-**Vision**: Foundation for advanced AI reasoning research
-
 ## References
 
 - [DeepSeek V3 Paper](https://arxiv.org/abs/2412.19437) - Original model architecture
@@ -218,5 +215,6 @@ A: Those are inference runtimes, not development frameworks / LLM frameworks. Th
 
 ---
 
-- **Status**: 🎯 Seeking feedback on initial idea
-- **Target**: Production-ready LLM inference in Zig 
+**Status**: 🎯 Seeking feedback & idea expansion
+
+**Vision**: Foundation for advanced AI reasoning research
