@@ -32,8 +32,8 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 
 ## Why Zig?
 
-**Performance**: Zero-cost abstractions, compile-time optimization, direct hardware access
-**Simplicity**: Single static binary, no runtime dependencies, cross-compilation built-in
+**Performance**: Zero-cost abstractions, compile-time optimization, direct hardware access<br/>
+**Simplicity**: Single static binary, no runtime dependencies, cross-compilation built-in<br/>
 **Web-First**: Native HTTP server, WebAssembly compilation, efficient memory management
 
 ## Proposed Architecture
@@ -215,6 +215,5 @@ A: Those are inference runtimes, not development frameworks / LLM frameworks. Th
 
 ---
 
-**Status**: 🎯 Seeking feedback & idea expansion
-
+**Status**: 🎯 Seeking feedback & idea expansion<br/>
 **Vision**: Foundation for advanced AI reasoning research
