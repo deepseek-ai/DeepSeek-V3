@@ -30,7 +30,7 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 - **Complex deployment** with heavy runtimes
 - **Platform lock-in** due to dependency complexity
 
-## The Zig Advantage
+## Why Zig?
 
 **Performance**: Zero-cost abstractions, compile-time optimization, direct hardware access
 **Simplicity**: Single static binary, no runtime dependencies, cross-compilation built-in
@@ -180,6 +180,8 @@ This is an ambitious project that would benefit from expertise in:
 - **ML model implementation**
 - **Web server development**
 - **Performance optimization**
+- **Hardware-software co-design**
+- **Novel inference techniques** (Speculative decoding, quantization)
 
 ## Project Timeline
 
@@ -188,12 +190,31 @@ This is an ambitious project that would benefit from expertise in:
 - Backend optimization and web API
 - Testing, benchmarking, deployment tools
 
+## Key Questions
+
+**Q: Why not just optimize PyTorch?**  
+A: PyTorch's Python overhead and GC pauses are fundamental limitations. Zig offers zero-cost abstractions, superior error handling, and deterministic performance.
+
+**Q: How will this compare to llama.cpp?**  
+A: Similar performance goals, but with built-in web API, better memory management, and focus on DeepSeek V3's specific MoE architecture.
+
+**Q: What about ONNX/TensorRT/ZML etc?**  
+A: Those are inference runtimes, not development frameworks / LLM frameworks. This project enables rapid iteration and custom optimization for research.
+
+---
+
+**Status**: 🎯 Seeking feedback & idea expansion
+**Vision**: Foundation for advanced AI reasoning research
+
 ## References
 
 - [DeepSeek V3 Paper](https://arxiv.org/abs/2412.19437) - Original model architecture
 - [Zig Language](https://ziglang.org/) - Language documentation
 - [Awesome Zig](https://github.com/C-BJ/awesome-zig) - Community resources
 - [Zig Patterns](https://github.com/SuperAuguste/zig-patterns) - Common idioms
+- [ZML](https://github.com/zml/zml) - Zig Inference Stack
+- [LLaMA.cpp](https://github.com/ggerganov/llama.cpp) - C++ Inference Engine
+- [DeepZig Consciousness](https://github.com/Triex/DeepZig-Consciousness) - Research goal/end game
 
 ---
 
