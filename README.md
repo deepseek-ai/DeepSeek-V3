@@ -101,10 +101,10 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 
 ## Technical Challenges
 
-**Model Complexity**: DeepSeek V3's MoE architecture requires careful memory management
-**Backend Integration**: Need efficient FFI to CUDA/Metal while maintaining performance
-**Web Scale**: Handle concurrent requests without blocking inference
-**Accuracy**: Match PyTorch numerical precision
+- **Model Complexity**: DeepSeek V3's MoE architecture requires careful memory management
+- **Backend Integration**: Need efficient FFI to CUDA/Metal while maintaining performance
+- **Web Scale**: Handle concurrent requests without blocking inference
+- **Accuracy**: Match PyTorch numerical precision
 
 ## Platform-Specific Opportunities
 
@@ -197,6 +197,5 @@ This is an ambitious project that would benefit from expertise in:
 
 ---
 
-**Status**: 🎯 Seeking feedback on initial idea
-
-**Target**: Production-ready LLM inference in Zig 
+- **Status**: 🎯 Seeking feedback on initial idea
+- **Target**: Production-ready LLM inference in Zig 
