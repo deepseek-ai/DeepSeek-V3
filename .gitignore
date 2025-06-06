@@ -170,3 +170,6 @@ cython_debug/
 .vscode/*
 
 .DS_Store
+
+# Zig
+experimental/.zig-cache/

@@ -1,0 +1,32 @@
+.{
+    .name = .deepzig_v3,
+    .version = "0.1.0",
+    .fingerprint = 0x602e54a97e1751eb,
+    .minimum_zig_version = "0.15.0-dev.703",
+
+    .dependencies = .{
+        // HTTP/Web dependencies
+        // TODO: Add when available for 0.15.0-dev
+        // .httpz = .{
+        //     .url = "https://github.com/karlseguin/http.zig/archive/refs/heads/master.tar.gz",
+        //     .hash = "1220...",
+        // },
+        
+        // JSON parsing
+        // TODO: Add structured JSON library if needed beyond std.json
+        
+        // SIMD/Math libraries
+        // TODO: Add optimized math libraries if available
+        
+        // Tokenizer dependencies
+        // TODO: Add tokenizer libraries or implement from scratch
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "bench",
+        "README.md",
+    },
+} 
