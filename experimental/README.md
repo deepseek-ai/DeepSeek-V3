@@ -4,8 +4,8 @@ A high-performance implementation of DeepSeek V3 in [Zig](https://ziglang.org/) 
 
 > **⚠️ Status: Experimental Foundation** 
 > 
-> This project provides a **base foundation** for DeepSeek V3 in Zig with:
-> - ✅ **Working HTTP server** with OpenAI-compatible API
+> This project provides a **theoretical base foundation** for DeepZig V3 with draft implementation:
+> - ✅ **HTTP server** with OpenAI-compatible API
 > - ✅ **SIMD-optimized tensor operations** (AVX2, NEON)
 > - ✅ **Cross-platform build system** (Zig 0.15.0-dev)
 > - ✅ **Memory management** and backend architecture
