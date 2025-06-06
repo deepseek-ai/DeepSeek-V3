@@ -11,6 +11,7 @@ A high-performance implementation of DeepSeek V3 in [Zig](https://ziglang.org/) 
 > - ✅ **Memory management** and backend architecture
 > 
 > **Not yet implemented**: Full DeepSeek V3 model architecture, attention mechanisms, MoE routing.
+> **Performance Note**: Current implementation uses naive algorithms - matrix multiplication is ~1000x slower than optimized BLAS. See benchmarks below.
 > See [Development Status](#development-status) for details.
 
 ## Overview
@@ -239,9 +240,9 @@ Thread count: 16
 
 Operation                      | Iterations |  Avg Time | Operations/s | Memory
 -------------------------------|------------|-----------|--------------|-------
-Tensor Creation (1024x1024)    |   1000 iter |     0.05 ms |   20000000 ops/s |   4.0 MB
-Tensor Addition (SIMD)         |    100 iter |     0.12 ms |  35000000000 ops/s |  48.0 MB
-Matrix Multiplication          |     10 iter |   125.30 ms |       17.2 GFLOPS |  12.0 MB
+Tensor Creation (1024x1024)    |   1000 iter |     2.03 ms |        493 ops/s |   4.0 MB
+Tensor Addition (SIMD)         |    100 iter |     1.49 ms | 2806962690 ops/s |  48.0 MB  
+Matrix Multiplication          |     10 iter |  6418.08 ms |          0 GFLOPS |  12.0 MB
 ```
 
 ## Known Issues
@@ -266,8 +267,8 @@ This experimental implementation follows the same license as the original DeepSe
 
 **No** - this is a research/development foundation. But it's **theoretical and compiles**:
 
-- **What works now**: ✅ Compiles with Zig 0.15.0-dev, tensor math, SIMD operations, benchmarks, backend architecture
-- **What's missing**: HTTP server API update, actual DeepSeek V3 model implementation  
+- **What works now**: ✅ Compiles and runs with Zig 0.15.0-dev, HTTP server, tensor operations, SIMD math, benchmarks execute successfully
+- **What's missing**: Optimized matrix operations, actual DeepSeek V3 model implementation
 - **Timeline**: Foundation is **compiling**, model implementation is the next major milestone
 
 ## Comparison to Other Projects
@@ -284,3 +285,13 @@ This experimental implementation follows the same license as the original DeepSe
 ---
 
 **⚡ Built with Zig for blazing fast LLM inference!** 
+
+## Performance Notes
+
+**Current Status**: The implementation prioritises initial **correctness and architecture** over performance. Key limitations:
+
+- **Matrix Multiplication**: Uses naive O(n³) algorithm (~640ms for 1024×1024) - needs BLAS optimization  
+- **Debug Builds**: Running in debug mode - release builds will be faster
+- **No GPU Acceleration**: CPU-only implementation - GPU backends will provide major speedups
+
+**Expected Optimisations**: 100-1000x speedup possible with optimized BLAS, release builds, and GPU backends. 
