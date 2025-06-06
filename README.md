@@ -23,7 +23,7 @@
 A proposal & foundation for implementing DeepSeek V3 in Zig to create a high-performance, web-ready LLM inference engine. This leverages Zig's unique advantages for systems programming while targeting modern deployment scenarios.
 
 **Status Update**: ✅ **Foundation compiles cleanly with theoretical implementation** with Zig 0.15.0-dev, including:
-- Working HTTP server with modern Zig API
+   HTTP server with modern Zig API
 - SIMD-optimized tensor operations  
 - Cross-platform backend architecture
 - Professional memory management
