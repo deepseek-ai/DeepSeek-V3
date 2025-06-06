@@ -6,6 +6,9 @@ const deepseek_core = @import("deepseek_core");
 const cpu_backend = @import("cpu_backend");
 const print = std.debug.print;
 
+// Import Shape from deepseek_core
+const Shape = deepseek_core.Shape;
+
 const BenchmarkResult = struct {
     name: []const u8,
     iterations: u32,
@@ -34,15 +37,15 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     
-    print("🚀 DeepZig V3 Performance Benchmarks\n");
-    print("==========================================\n\n");
+    print("🚀 DeepZig V3 Performance Benchmarks\n", .{});
+    print("==========================================\n\n", .{});
     
     // Initialize backends
-    const cpu_backend_instance = try cpu_backend.init(allocator);
+    var cpu_backend_instance = try cpu_backend.init(allocator);
     defer cpu_backend_instance.deinit();
     
-    print("Backend: CPU (SIMD optimized)\n");
-    print("Architecture: {s}\n", @tagName(@import("builtin").cpu.arch));
+    print("Backend: CPU (SIMD optimized)\n", .{});
+    print("Architecture: {s}\n", .{@tagName(@import("builtin").cpu.arch)});
     print("Thread count: {d}\n\n", .{std.Thread.getCpuCount() catch 4});
     
     // Run benchmarks
@@ -62,22 +65,22 @@ pub fn main() !void {
     try results.append(try benchmarkMemoryBandwidth(allocator));
     
     // Print results
-    print("Benchmark Results:\n");
-    print("------------------\n");
-    print("Operation                      | Iterations |  Avg Time | Operations/s | Memory\n");
-    print("-------------------------------|------------|-----------|--------------|-------\n");
+    print("Benchmark Results:\n", .{});
+    print("------------------\n", .{});
+    print("Operation                      | Iterations |  Avg Time | Operations/s | Memory\n", .{});
+    print("-------------------------------|------------|-----------|--------------|-------\n", .{});
     
     for (results.items) |result| {
         print("{}\n", .{result});
     }
     
-    print("\n🎯 Benchmark completed!\n");
+    print("\n🎯 Benchmark completed!\n", .{});
 }
 
 /// Benchmark tensor creation and memory allocation
 fn benchmarkTensorCreation(allocator: std.mem.Allocator) !BenchmarkResult {
     const iterations = 1000;
-    const shape = deepseek_core.Tensor.Shape.init(&[_]u32{ 1024, 1024 });
+    const shape = Shape.init(&[_]u32{ 1024, 1024 });
     
     const start_time = std.time.nanoTimestamp();
     
@@ -103,7 +106,7 @@ fn benchmarkTensorCreation(allocator: std.mem.Allocator) !BenchmarkResult {
 /// Benchmark SIMD-optimized tensor addition
 fn benchmarkTensorAddition(allocator: std.mem.Allocator) !BenchmarkResult {
     const iterations = 100;
-    const shape = deepseek_core.Tensor.Shape.init(&[_]u32{ 4096, 1024 });
+    const shape = Shape.init(&[_]u32{ 4096, 1024 });
     
     var a = try deepseek_core.Tensor.ones(allocator, shape, .f32);
     defer a.deinit();
@@ -145,9 +148,9 @@ fn benchmarkMatrixMultiplication(allocator: std.mem.Allocator) !BenchmarkResult 
     const k = 1024;
     const n = 1024;
     
-    const a_shape = deepseek_core.Tensor.Shape.init(&[_]u32{ m, k });
-    const b_shape = deepseek_core.Tensor.Shape.init(&[_]u32{ k, n });
-    const c_shape = deepseek_core.Tensor.Shape.init(&[_]u32{ m, n });
+    const a_shape = Shape.init(&[_]u32{ m, k });
+    const b_shape = Shape.init(&[_]u32{ k, n });
+    const c_shape = Shape.init(&[_]u32{ m, n });
     
     var a = try deepseek_core.Tensor.ones(allocator, a_shape, .f32);
     defer a.deinit();

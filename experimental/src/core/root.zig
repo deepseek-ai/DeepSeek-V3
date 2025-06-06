@@ -5,6 +5,7 @@ const std = @import("std");
 
 // Core components
 pub const Tensor = @import("tensor.zig").Tensor;
+pub const Shape = @import("tensor.zig").Shape;
 pub const Model = @import("model.zig").Model;
 pub const Transformer = @import("transformer.zig").Transformer;
 pub const Attention = @import("attention.zig").Attention;
