@@ -69,7 +69,7 @@ experimental/
 
 ## Requirements
 
-- **Zig 0.15.0-dev** or later
+- **Zig 0.15.0-dev**
 - Platform-specific requirements:
   - **macOS**: Xcode Command Line Tools (for Metal backend)
   - **Linux**: CUDA Toolkit (for CUDA backend, optional)
