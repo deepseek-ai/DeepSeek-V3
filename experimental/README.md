@@ -10,8 +10,9 @@ A high-performance implementation of DeepSeek V3 in [Zig](https://ziglang.org/) 
 > - ✅ **Cross-platform build system** (Zig 0.15.0-dev)
 > - ✅ **Memory management** and backend architecture
 > 
-> **Not yet implemented**: Full DeepSeek V3 model architecture, attention mechanisms, MoE routing.
-> **Performance Note**: Current implementation uses naive algorithms - matrix multiplication is ~1000x slower than optimized BLAS. See benchmarks below.
+> **Not yet implemented**: Full DeepSeek V3 model architecture, attention mechanisms, MoE routing.<br/>
+> **Performance Note**: Current implementation uses naive algorithms - matrix multiplication is ~1000x slower than optimized BLAS. See [benchmarks](#benchmarks) below.<br/>
+> 
 > See [Development Status](#development-status) for details.
 
 ## Overview
