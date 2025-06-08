@@ -22,12 +22,12 @@
 
 A proposal & foundation for implementing DeepSeek V3 in Zig to create a high-performance, web-ready LLM inference engine. This leverages Zig's unique advantages for systems programming while targeting modern deployment scenarios.
 
-**Status Update**: ✅ **Foundation compiles cleanly with theoretical implementation** with Zig 0.15.0-dev, including:
+**Status Update**: ✅ **Foundation compiles clean theoretical implementation** with Zig 0.15.0-dev, including:
    HTTP server with modern Zig API
 - SIMD-optimized tensor operations  
 - Cross-platform backend architecture
-- Professional memory management
-- Comprehensive build system
+- Initial memory management
+- Comprehensive build system draft
 
 ## Why This Matters
 
@@ -214,6 +214,7 @@ A: Those are inference runtimes, not development frameworks / LLM frameworks. Th
 
 ## References
 
+- [DeepZig V3 (Experimental Start)](https://github.com/Triex/DeepZig-V3/tree/main/experimental)
 - [DeepSeek V3 Paper](https://arxiv.org/abs/2412.19437) - Original model architecture
 - [Zig Language](https://ziglang.org/) - Language documentation
 - [Awesome Zig](https://github.com/C-BJ/awesome-zig) - Community resources
