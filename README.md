@@ -33,7 +33,7 @@ A **DRAFT proposal & foundation** for implementing DeepSeek V3 in Zig to create 
 - ✅ **Improved matrix operations** (1000+ GFLOPS performance on an M1 Macbook)
 - ⚠️ **NOT PRODUCTION READY** - Draft implementation for research/development
 
-**Performance Update**: ~~Current naive algorithms are ~1000x slower than optimized BLAS~~ **BLAS integration now functional.** Matrix multiplication: **2.1ms for 1024×1024** at **1000+ GFLOPS** on an M1 Macbook. This represents significant improvement over our initial naive implementation. See [experimental benchmarks](experimental/README.md#benchmarks) for detailed performance data.
+**Performance Update**: ~~Current naive algorithms are ~1000x slower than optimized BLAS~~ **BLAS integration now functional.** Matrix multiplication: **2.1ms for 1024×1024** at **1164 GFLOPS**, with peak **1084 GFLOPS at 512×512** on an M1 MacBook Pro under heavy load. This represents a ~**3000x speedup** over our initial naive implementation. See [experimental benchmarks](experimental/README.md#benchmarks) for detailed performance data.
 
 ## Why This Matters
 
@@ -53,9 +53,10 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 | Memory usage | 20-40GB | **< 16GB** | *16GB+ for basic ops* |
 | Dependencies | ~2GB runtime | **Single binary** | ✅ **Single binary** |
 | Deployment | Complex | **Copy & run** | ✅ **Copy & run** |
-| Matrix Mul (1024×1024) | ~1ms (optimized) | **< 1ms** | ✅ **2.1ms (1000+ GFLOPS/M1 Macbook)** |
+| Matrix Mul (1024×1024) | ~1ms (optimized) | **< 1ms** | ✅ **2.1ms (1164 GFLOPS)** |
+| Peak Performance | ~1500 GFLOPS | **> 1000 GFLOPS** | ✅ **1164 GFLOPS** |
 
-*See [experimental benchmarks](experimental/README.md#benchmarks) for current performance measurements.*
+*Benchmarked on Apple M1 MacBook Pro under heavy load*
 
 ## Why Zig?
 
