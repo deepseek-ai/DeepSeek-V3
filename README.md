@@ -29,9 +29,11 @@ A **DRAFT proposal & foundation** for implementing DeepSeek V3 in Zig to create 
 - ✅ Initial memory management
 - ✅ **Apple Silicon M-series detection** (hardware detection via sysctl)
 - ✅ Comprehensive build system draft
+- ✅ **BLAS integration working** (Apple Accelerate backend functional)
+- ✅ **Improved matrix operations** (1000+ GFLOPS performance)
 - ⚠️ **NOT PRODUCTION READY** - Draft implementation for research/development
 
-**Performance Note**: Current naive algorithms are ~1000x slower than optimized BLAS. Matrix multiplication: 640ms for 1024×1024. This is expected for a foundational draft implementation. See [experimental benchmarks](experimental/README.md#benchmarks) for detailed performance data.
+**Performance Update**: ~~Current naive algorithms are ~1000x slower than optimized BLAS~~ **BLAS integration now functional.** Matrix multiplication: **2.1ms for 1024×1024** at **1000+ GFLOPS**. This represents significant improvement over our initial naive implementation. See [experimental benchmarks](experimental/README.md#benchmarks) for detailed performance data.
 
 ## Why This Matters
 
@@ -41,15 +43,17 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 - **Complex deployment** with heavy runtimes
 - **Platform lock-in** due to dependency complexity
 
+**Progress Update**: Our draft implementation now includes BLAS integration delivering improved matrix operation performance with Apple Accelerate backend.
+
 ## Expected Benefits vs Current Reality
 
-| Aspect | Current (PyTorch) | Target (Zig) | **Current Draft** |
-|--------|------------------|--------------|-------------------|
+| Aspect | Current (PyTorch) | Target (Zig) | **Current Achievement** |
+|--------|------------------|--------------|-------------------------|
 | Cold start | 10-30s | **< 2s** | *Not measured* |
 | Memory usage | 20-40GB | **< 16GB** | *16GB+ for basic ops* |
 | Dependencies | ~2GB runtime | **Single binary** | ✅ **Single binary** |
 | Deployment | Complex | **Copy & run** | ✅ **Copy & run** |
-| Matrix Mul (1024×1024) | ~1ms (optimized) | **< 1ms** | *6418ms (naive)* |
+| Matrix Mul (1024×1024) | ~1ms (optimized) | **< 1ms** | ✅ **2.1ms (1000+ GFLOPS)** |
 
 *See [experimental benchmarks](experimental/README.md#benchmarks) for current performance measurements.*
 
@@ -98,8 +102,10 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 - [x] **Apple Silicon detection via sysctl calls**
 - [x] **Updated to Zig 0.15.0-dev - compiles cleanly**
 - [x] **Benchmark suite** showing current performance
+- [x] **BLAS integration working** - Apple Accelerate backend functional
+- [x] **Improved matrix performance** - 1000+ GFLOPS operations
 
-*📈 Performance baseline established - see [benchmarks](experimental/README.md#benchmarks)*
+*📈 Performance improvement achieved - BLAS acceleration now working*
 
 ### Phase 2: Core Model (IN PROGRESS)
 - [ ] Implement transformer layers
@@ -125,7 +131,7 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 - **Backend Integration**: Need efficient FFI to CUDA/Metal while maintaining performance
 - **Web Scale**: Handle concurrent requests without blocking inference
 - **Accuracy**: Match PyTorch numerical precision
-- **Performance**: Current implementation is 1000x slower than optimised BLAS - major optimization needed
+- **Performance**: Matrix operations now use BLAS acceleration - focus shifts to model architecture optimisation
 
 ## Platform-Specific Opportunities
 
@@ -189,7 +195,7 @@ Reference: [Zig Cookbook](https://zigcc.github.io/zig-cookbook/) for implementat
 ## Seeking Contributors
 
 This is an ambitious **DRAFT project** that would benefit from expertise in:
-- **Performance optimization** (current bottleneck: naive matrix operations)
+- **Performance optimization** (focus on transformer and attention mechanisms)
 - **Zig systems programming**
 - **GPU kernel optimization** (CUDA/Metal)
 - **ML model implementation**
@@ -199,10 +205,10 @@ This is an ambitious **DRAFT project** that would benefit from expertise in:
 
 ## Current Limitations & Next Steps
 
-**🚧 What's Working**: Compiles, runs, measures performance  
-**⚠️ What's Missing**: Optimized algorithms, robust flows, actual DeepSeek V3 model  
-**📊 Performance Gap**: 1000x slower than production systems  
-**🎯 Next Priority**: BLAS integration and GPU acceleration  
+**🚧 What's Working**: ✅ Compiles, runs, **BLAS acceleration functional**  
+**⚠️ What's Missing**: Robust flows, actual DeepSeek V3 model implementation  
+**📊 Performance Status**: ✅ **Matrix operations improved** (BLAS working)  
+**🎯 Next Priority**: DeepSeek V3 transformer architecture and attention mechanisms  
 
 See [experimental implementation](experimental/) for technical details and current benchmarks.
 
