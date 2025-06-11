@@ -30,10 +30,10 @@ A **DRAFT proposal & foundation** for implementing DeepSeek V3 in Zig to create 
 - ✅ **Apple Silicon M-series detection** (hardware detection via sysctl)
 - ✅ Comprehensive build system draft
 - ✅ **BLAS integration working** (Apple Accelerate backend functional)
-- ✅ **Improved matrix operations** (1000+ GFLOPS performance)
+- ✅ **Improved matrix operations** (1000+ GFLOPS performance on an M1 Macbook)
 - ⚠️ **NOT PRODUCTION READY** - Draft implementation for research/development
 
-**Performance Update**: ~~Current naive algorithms are ~1000x slower than optimized BLAS~~ **BLAS integration now functional.** Matrix multiplication: **2.1ms for 1024×1024** at **1000+ GFLOPS**. This represents significant improvement over our initial naive implementation. See [experimental benchmarks](experimental/README.md#benchmarks) for detailed performance data.
+**Performance Update**: ~~Current naive algorithms are ~1000x slower than optimized BLAS~~ **BLAS integration now functional.** Matrix multiplication: **2.1ms for 1024×1024** at **1000+ GFLOPS** on an M1 Macbook. This represents significant improvement over our initial naive implementation. See [experimental benchmarks](experimental/README.md#benchmarks) for detailed performance data.
 
 ## Why This Matters
 
