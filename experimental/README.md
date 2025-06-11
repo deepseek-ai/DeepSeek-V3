@@ -9,6 +9,7 @@ A high-performance implementation of DeepSeek V3 in [Zig](https://ziglang.org/) 
 > - ✅ **SIMD-optimized tensor operations** (AVX2, NEON)
 > - ✅ **Cross-platform build system** (Zig 0.15.0-dev)
 > - ✅ **Memory management** and backend architecture
+> - ✅ **Apple Silicon detection via sysctl calls**
 > 
 > **Not yet implemented**: Full DeepSeek V3 model architecture, attention mechanisms, MoE routing.<br/>
 > **Performance Note**: Current implementation uses naive algorithms - matrix multiplication is ~1000x slower than optimized BLAS. See [benchmarks](#benchmarks) below.<br/>
@@ -24,6 +25,8 @@ This experimental implementation aims to leverage Zig's unique advantages for sy
 - **Manual memory management** without garbage collection pauses
 - **Single binary deployment** with no runtime dependencies
 - **Cross-platform compilation** for multiple architectures
+
+**🔗 Related**: See the [main project README](../README.md) for architecture overview and vision.
 
 ## Project Structure
 
@@ -243,7 +246,10 @@ Operation                      | Iterations |  Avg Time | Operations/s | Memory
 -------------------------------|------------|-----------|--------------|-------
 Tensor Creation (1024x1024)    |   1000 iter |     2.03 ms |        493 ops/s |   4.0 MB
 Tensor Addition (SIMD)         |    100 iter |     1.49 ms | 2806962690 ops/s |  48.0 MB  
-Matrix Multiplication          |     10 iter |  6418.08 ms |          0 GFLOPS |  12.0 MB
+Matrix Multiplication          |     10 iter |  6418.08 ms |         0 GFLOPS |  12.0 MB
+SwiGLU Activation              |   1000 iter |     4.44 ms |  236002478 ops/s |   12.0 MB
+RMS Normalization (SIMD)       |   1000 iter |     0.00 ms |    1077586 ops/s |    0.0 MB
+Memory Bandwidth               |    100 iter |     4.92 ms |         13 ops/s |  128.0 MB
 ```
 
 ## Known Issues
