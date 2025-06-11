@@ -1,48 +1,10 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    // Standard optimization options
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // === CORE LIBRARY MODULE ===
-    const deepseek_core = b.addModule("deepseek_core", .{
-        .root_source_file = b.path("src/core/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    // === WEB LAYER MODULE ===
-    const web_layer = b.addModule("web_layer", .{
-        .root_source_file = b.path("src/web/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    web_layer.addImport("deepseek_core", deepseek_core);
-
-    // === BACKEND MODULES ===
-    const cpu_backend = b.addModule("cpu_backend", .{
-        .root_source_file = b.path("src/backends/cpu/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    cpu_backend.addImport("deepseek_core", deepseek_core);
-
-    const metal_backend = b.addModule("metal_backend", .{
-        .root_source_file = b.path("src/backends/metal/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    metal_backend.addImport("deepseek_core", deepseek_core);
-
-    const cuda_backend = b.addModule("cuda_backend", .{
-        .root_source_file = b.path("src/backends/cuda/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    cuda_backend.addImport("deepseek_core", deepseek_core);
-
-    // === MAIN EXECUTABLE ===
+    // Main executable
     const exe = b.addExecutable(.{
         .name = "deepseek-v3-zig",
         .root_source_file = b.path("src/main.zig"),
@@ -50,31 +12,41 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // Add imports to main executable
-    exe.root_module.addImport("deepseek_core", deepseek_core);
-    exe.root_module.addImport("web_layer", web_layer);
-    exe.root_module.addImport("cpu_backend", cpu_backend);
-    exe.root_module.addImport("metal_backend", metal_backend);
-    exe.root_module.addImport("cuda_backend", cuda_backend);
+    // BLAS library configuration based on target platform
+    configureBlas(exe, target);
 
-    // Platform-specific backend linking
+    // Add module dependencies
+    const deepseek_core = b.addModule("deepseek_core", .{
+        .root_source_file = b.path("src/core/root.zig"),
+    });
+    exe.root_module.addImport("deepseek_core", deepseek_core);
+
+    const web_layer = b.addModule("web_layer", .{
+        .root_source_file = b.path("src/web/root.zig"),
+    });
+    web_layer.addImport("deepseek_core", deepseek_core);
+    exe.root_module.addImport("web_layer", web_layer);
+
+    const cpu_backend = b.addModule("cpu_backend", .{
+        .root_source_file = b.path("src/backends/cpu/root.zig"),
+    });
+    cpu_backend.addImport("deepseek_core", deepseek_core);
+    exe.root_module.addImport("cpu_backend", cpu_backend);
+
+    const metal_backend = b.addModule("metal_backend", .{
+        .root_source_file = b.path("src/backends/metal/root.zig"),
+    });
+    metal_backend.addImport("deepseek_core", deepseek_core);
+    exe.root_module.addImport("metal_backend", metal_backend);
+
+    // Add Metal framework for macOS
     if (target.result.os.tag == .macos) {
         exe.linkFramework("Metal");
-        exe.linkFramework("MetalKit");
         exe.linkFramework("Foundation");
-    }
-
-    // CUDA linking for Linux/Windows
-    if (target.result.os.tag == .linux or target.result.os.tag == .windows) {
-        // TODO: Add CUDA library paths when available
-        // exe.addLibraryPath(b.path("cuda/lib"));
-        // exe.linkSystemLibrary("cuda");
-        // exe.linkSystemLibrary("cublas");
     }
 
     b.installArtifact(exe);
 
-    // === RUN COMMAND ===
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
 
@@ -82,70 +54,93 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run", "Run the DeepSeek V3 server");
+    const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    // === TESTING ===
+    const unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const run_unit_tests = b.addRunArtifact(unit_tests);
+
     const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_unit_tests.step);
 
-    // Core tests
-    const core_tests = b.addTest(.{
-        .root_source_file = b.path("src/core/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    test_step.dependOn(&b.addRunArtifact(core_tests).step);
-
-    // Web tests
-    const web_tests = b.addTest(.{
-        .root_source_file = b.path("src/web/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    web_tests.root_module.addImport("deepseek_core", deepseek_core);
-    test_step.dependOn(&b.addRunArtifact(web_tests).step);
-
-    // Backend tests
-    const cpu_tests = b.addTest(.{
-        .root_source_file = b.path("src/backends/cpu/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    cpu_tests.root_module.addImport("deepseek_core", deepseek_core);
-    test_step.dependOn(&b.addRunArtifact(cpu_tests).step);
-
-    // === BENCHMARKS ===
-    const bench_step = b.step("bench", "Run benchmarks");
-    
-    const bench_exe = b.addExecutable(.{
-        .name = "bench",
+    // Benchmarks
+    const benchmark_exe = b.addExecutable(.{
+        .name = "deepseek-v3-benchmark",
         .root_source_file = b.path("bench/main.zig"),
         .target = target,
-        .optimize = .ReleaseFast,
+        .optimize = optimize,
     });
-    bench_exe.root_module.addImport("deepseek_core", deepseek_core);
-    bench_exe.root_module.addImport("cpu_backend", cpu_backend);
-    
-    const bench_run = b.addRunArtifact(bench_exe);
-    bench_step.dependOn(&bench_run.step);
 
-    // === WASM TARGET ===
-    const wasm_step = b.step("wasm", "Build WebAssembly target");
-    const wasm_target = b.resolveTargetQuery(.{
-        .cpu_arch = .wasm32,
-        .os_tag = .freestanding,
+    // Add the same modules to benchmark
+    benchmark_exe.root_module.addImport("deepseek_core", deepseek_core);
+
+    const cpu_backend_bench = b.addModule("cpu_backend", .{
+        .root_source_file = b.path("src/backends/cpu/root.zig"),
     });
-    
-    const wasm_exe = b.addExecutable(.{
-        .name = "deepseek-v3-wasm",
-        .root_source_file = b.path("src/wasm/main.zig"),
-        .target = wasm_target,
-        .optimize = .ReleaseSmall,
+    cpu_backend_bench.addImport("deepseek_core", deepseek_core);
+    benchmark_exe.root_module.addImport("cpu_backend", cpu_backend_bench);
+
+    // Configure BLAS for benchmarks too
+    configureBlas(benchmark_exe, target);
+
+    // Add Metal framework for benchmarks on macOS
+    if (target.result.os.tag == .macos) {
+        benchmark_exe.linkFramework("Metal");
+        benchmark_exe.linkFramework("Foundation");
+    }
+
+    b.installArtifact(benchmark_exe);
+
+    const benchmark_run_cmd = b.addRunArtifact(benchmark_exe);
+    benchmark_run_cmd.step.dependOn(b.getInstallStep());
+
+    const benchmark_step = b.step("benchmark", "Run benchmarks");
+    benchmark_step.dependOn(&benchmark_run_cmd.step);
+
+    // BLAS benchmarks specifically
+    const blas_bench_exe = b.addExecutable(.{
+        .name = "blas-benchmark",
+        .root_source_file = b.path("bench/blas_bench.zig"),
+        .target = target,
+        .optimize = optimize,
     });
-    wasm_exe.root_module.addImport("deepseek_core", deepseek_core);
-    wasm_exe.entry = .disabled;
-    wasm_exe.rdynamic = true;
-    
-    const wasm_install = b.addInstallArtifact(wasm_exe, .{});
-    wasm_step.dependOn(&wasm_install.step);
-} 
+
+    blas_bench_exe.root_module.addImport("deepseek_core", deepseek_core);
+    configureBlas(blas_bench_exe, target);
+
+    const blas_bench_run = b.addRunArtifact(blas_bench_exe);
+    const blas_bench_step = b.step("bench-blas", "Run BLAS-specific benchmarks");
+    blas_bench_step.dependOn(&blas_bench_run.step);
+}
+
+/// Configure BLAS linking for the given compile step based on target platform
+fn configureBlas(step: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
+    const target_os = target.result.os.tag;
+
+    switch (target_os) {
+        .macos => {
+            // Use Apple's Accelerate framework
+            step.linkFramework("Accelerate");
+            step.root_module.addCMacro("HAVE_ACCELERATE", "1");
+        },
+        .linux => {
+            // Use OpenBLAS on Linux
+            step.linkSystemLibrary("openblas");
+            step.root_module.addCMacro("HAVE_OPENBLAS", "1");
+        },
+        .windows => {
+            // Use OpenBLAS on Windows (if available)
+            step.linkSystemLibrary("openblas");
+            step.root_module.addCMacro("HAVE_OPENBLAS", "1");
+        },
+        else => {
+            // Fallback to naive implementation
+            step.root_module.addCMacro("HAVE_NAIVE_BLAS", "1");
+        },
+    }
+}

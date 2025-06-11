@@ -2,13 +2,13 @@
 // Tests performance of core operations across different backends
 
 const std = @import("std");
-const deepseek_core = @import("deepseek_core");
-const cpu_backend = @import("cpu_backend");
 const print = std.debug.print;
 
-// Import Shape from deepseek_core
+const cpu_backend = @import("cpu_backend");
+const deepseek_core = @import("deepseek_core");
 const Shape = deepseek_core.Shape;
 
+// Import Shape from deepseek_core
 const BenchmarkResult = struct {
     name: []const u8,
     iterations: u32,
@@ -16,7 +16,7 @@ const BenchmarkResult = struct {
     avg_time_ns: u64,
     ops_per_second: f64,
     memory_used_mb: f64,
-    
+
     pub fn format(
         self: BenchmarkResult,
         comptime fmt: []const u8,
@@ -25,10 +25,7 @@ const BenchmarkResult = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try writer.print(
-            "{s:30} | {d:6} iter | {d:8.2} ms | {d:10.0} ops/s | {d:6.1} MB",
-            .{ self.name, self.iterations, @as(f64, @floatFromInt(self.avg_time_ns)) / 1_000_000.0, self.ops_per_second, self.memory_used_mb }
-        );
+        try writer.print("{s:30} | {d:6} iter | {d:8.2} ms | {d:10.0} ops/s | {d:6.1} MB", .{ self.name, self.iterations, @as(f64, @floatFromInt(self.avg_time_ns)) / 1_000_000.0, self.ops_per_second, self.memory_used_mb });
     }
 };
 
@@ -36,279 +33,221 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    
-    print("🚀 DeepZig V3 Performance Benchmarks\n", .{});
-    print("==========================================\n\n", .{});
-    
-    // Initialize backends
-    var cpu_backend_instance = try cpu_backend.init(allocator);
-    defer cpu_backend_instance.deinit();
-    
-    print("Backend: CPU (SIMD optimized)\n", .{});
-    print("Architecture: {s}\n", .{@tagName(@import("builtin").cpu.arch)});
-    print("Thread count: {d}\n\n", .{std.Thread.getCpuCount() catch 4});
-    
-    // Run benchmarks
-    var results = std.ArrayList(BenchmarkResult).init(allocator);
-    defer results.deinit();
-    
-    // Tensor operations
-    try results.append(try benchmarkTensorCreation(allocator));
-    try results.append(try benchmarkTensorAddition(allocator));
-    try results.append(try benchmarkMatrixMultiplication(allocator));
-    
-    // Activation functions
-    try results.append(try benchmarkSwiGLU(allocator));
-    try results.append(try benchmarkRMSNorm(allocator));
-    
-    // Memory operations
-    try results.append(try benchmarkMemoryBandwidth(allocator));
-    
-    // Print results
-    print("Benchmark Results:\n", .{});
-    print("------------------\n", .{});
-    print("Operation                      | Iterations |  Avg Time | Operations/s | Memory\n", .{});
-    print("-------------------------------|------------|-----------|--------------|-------\n", .{});
-    
-    for (results.items) |result| {
-        print("{}\n", .{result});
-    }
-    
-    print("\n🎯 Benchmark completed!\n", .{});
+
+    // Print banner
+    printBanner();
+
+    // Run comprehensive benchmarks
+    try runTensorBenchmarks(allocator);
+    try runBlasBenchmarks(allocator);
+    try runMemoryBenchmarks(allocator);
+
+    // Print summary
+    printBenchmarkSummary();
+
+    std.log.info("🎉 Benchmark suite completed!", .{});
 }
 
-/// Benchmark tensor creation and memory allocation
-fn benchmarkTensorCreation(allocator: std.mem.Allocator) !BenchmarkResult {
-    const iterations = 1000;
-    const shape = Shape.init(&[_]u32{ 1024, 1024 });
-    
-    const start_time = std.time.nanoTimestamp();
-    
-    for (0..iterations) |_| {
-        var tensor = try deepseek_core.Tensor.zeros(allocator, shape, .f32);
-        tensor.deinit();
-    }
-    
-    const end_time = std.time.nanoTimestamp();
-    const total_time = @as(u64, @intCast(end_time - start_time));
-    const avg_time = total_time / iterations;
-    
-    return BenchmarkResult{
-        .name = "Tensor Creation (1024x1024)",
-        .iterations = iterations,
-        .total_time_ns = total_time,
-        .avg_time_ns = avg_time,
-        .ops_per_second = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(total_time)) / 1_000_000_000.0),
-        .memory_used_mb = (1024.0 * 1024.0 * 4.0) / (1024.0 * 1024.0), // 4MB tensor
-    };
+fn printBanner() void {
+    std.log.info("🚀 DeepZig V3 Performance Benchmarks", .{});
+    std.log.info("==========================================", .{});
+    std.log.info("", .{});
 }
 
-/// Benchmark SIMD-optimized tensor addition
-fn benchmarkTensorAddition(allocator: std.mem.Allocator) !BenchmarkResult {
-    const iterations = 100;
-    const shape = Shape.init(&[_]u32{ 4096, 1024 });
-    
-    var a = try deepseek_core.Tensor.ones(allocator, shape, .f32);
+fn runTensorBenchmarks(allocator: std.mem.Allocator) !void {
+    std.log.info("📊 TENSOR OPERATIONS BENCHMARK", .{});
+    std.log.info("-------------------------------", .{});
+
+    // Test different matrix sizes
+    const sizes = [_]u32{ 256, 512, 1024, 2048 };
+    const iterations = [_]u32{ 50, 20, 10, 5 };
+
+    for (sizes, iterations) |size, iters| {
+        try benchmarkMatrixMultiplication(allocator, size, iters);
+    }
+
+    // Tensor addition benchmark
+    try benchmarkTensorAddition(allocator);
+
+    std.log.info("", .{});
+}
+
+fn benchmarkMatrixMultiplication(allocator: std.mem.Allocator, size: u32, iterations: u32) !void {
+    std.log.info("🔢 Matrix Multiplication {}x{} ({} iterations)", .{ size, size, iterations });
+
+    // Create matrices
+    var a = try deepseek_core.createMatrix(.f32, allocator, size, size);
+    var b = try deepseek_core.createMatrix(.f32, allocator, size, size);
+    var c = try deepseek_core.createMatrix(.f32, allocator, size, size);
     defer a.deinit();
-    
-    var b = try deepseek_core.Tensor.ones(allocator, shape, .f32);
     defer b.deinit();
-    
-    var result = try deepseek_core.Tensor.zeros(allocator, shape, .f32);
-    defer result.deinit();
-    
-    const start_time = std.time.nanoTimestamp();
-    
-    for (0..iterations) |_| {
-        try a.add(&b, &result);
-    }
-    
-    const end_time = std.time.nanoTimestamp();
-    const total_time = @as(u64, @intCast(end_time - start_time));
-    const avg_time = total_time / iterations;
-    
-    const elements_per_iter = shape.numel();
-    const total_elements = elements_per_iter * iterations;
-    const ops_per_second = @as(f64, @floatFromInt(total_elements)) / (@as(f64, @floatFromInt(total_time)) / 1_000_000_000.0);
-    
-    return BenchmarkResult{
-        .name = "Tensor Addition (SIMD)",
-        .iterations = iterations,
-        .total_time_ns = total_time,
-        .avg_time_ns = avg_time,
-        .ops_per_second = ops_per_second,
-        .memory_used_mb = (4096.0 * 1024.0 * 4.0 * 3.0) / (1024.0 * 1024.0), // 3 tensors
-    };
-}
-
-/// Benchmark matrix multiplication performance
-fn benchmarkMatrixMultiplication(allocator: std.mem.Allocator) !BenchmarkResult {
-    const iterations = 10;
-    const m = 1024;
-    const k = 1024;
-    const n = 1024;
-    
-    const a_shape = Shape.init(&[_]u32{ m, k });
-    const b_shape = Shape.init(&[_]u32{ k, n });
-    const c_shape = Shape.init(&[_]u32{ m, n });
-    
-    var a = try deepseek_core.Tensor.ones(allocator, a_shape, .f32);
-    defer a.deinit();
-    
-    var b = try deepseek_core.Tensor.ones(allocator, b_shape, .f32);
-    defer b.deinit();
-    
-    var c = try deepseek_core.Tensor.zeros(allocator, c_shape, .f32);
     defer c.deinit();
-    
-    const start_time = std.time.nanoTimestamp();
-    
+
+    // Fill with random data
+    a.fillRandom(42);
+    b.fillRandom(123);
+
+    // Benchmark
+    var timer = try std.time.Timer.start();
     for (0..iterations) |_| {
         try a.matmul(&b, &c);
     }
-    
-    const end_time = std.time.nanoTimestamp();
-    const total_time = @as(u64, @intCast(end_time - start_time));
-    const avg_time = total_time / iterations;
-    
-    // FLOPS calculation: 2 * M * N * K operations per matrix multiplication
-    const flops_per_iter = 2 * m * n * k;
-    const total_flops = flops_per_iter * iterations;
-    const gflops_per_second = (@as(f64, @floatFromInt(total_flops)) / (@as(f64, @floatFromInt(total_time)) / 1_000_000_000.0)) / 1_000_000_000.0;
-    
-    return BenchmarkResult{
-        .name = "Matrix Multiplication",
-        .iterations = iterations,
-        .total_time_ns = total_time,
-        .avg_time_ns = avg_time,
-        .ops_per_second = gflops_per_second, // Actually GFLOPS
-        .memory_used_mb = (@as(f64, @floatFromInt(m + k + n)) * 1024.0 * 4.0) / (1024.0 * 1024.0),
-    };
+    const elapsed_ns = timer.read();
+
+    // Calculate performance metrics
+    const ops = 2.0 * @as(f64, @floatFromInt(size)) * @as(f64, @floatFromInt(size)) * @as(f64, @floatFromInt(size)) * @as(f64, @floatFromInt(iterations));
+    const elapsed_s = @as(f64, @floatFromInt(elapsed_ns)) / 1e9;
+    const gflops = ops / elapsed_s / 1e9;
+    const avg_time_ms = elapsed_s * 1000.0 / @as(f64, @floatFromInt(iterations));
+
+    // Performance comparison
+    if (a.blas_ctx) |blas_context| {
+        const efficiency = gflops / blas_context.performance_info.peak_gflops * 100.0;
+        std.log.info("  ✅ BLAS-accelerated: {d:.1} ms/iter, {d:.1} GFLOPS ({d:.1}% efficiency)", .{ avg_time_ms, gflops, efficiency });
+        std.log.info("  🔧 Backend: {}, Peak: {d:.1} GFLOPS", .{ blas_context.backend, blas_context.performance_info.peak_gflops });
+    } else {
+        std.log.info("  ⚠️ Naive implementation: {d:.1} ms/iter, {d:.1} GFLOPS", .{ avg_time_ms, gflops });
+    }
 }
 
-/// Benchmark SwiGLU activation function
-fn benchmarkSwiGLU(allocator: std.mem.Allocator) !BenchmarkResult {
-    const iterations = 1000;
+fn benchmarkTensorAddition(allocator: std.mem.Allocator) !void {
     const size = 1024 * 1024; // 1M elements
-    
-    const input = try allocator.alloc(f32, size);
-    defer allocator.free(input);
-    
-    const gate = try allocator.alloc(f32, size);
-    defer allocator.free(gate);
-    
-    const output = try allocator.alloc(f32, size);
-    defer allocator.free(output);
-    
-    // Fill with random data
-    for (input, gate) |*i, *g| {
-        i.* = 0.5;
-        g.* = 0.3;
-    }
-    
-    const start_time = std.time.nanoTimestamp();
-    
+    const iterations = 1000;
+
+    std.log.info("➕ Tensor Addition (SIMD) - {} elements, {} iterations", .{ size, iterations });
+
+    var a = try deepseek_core.createVector(.f32, allocator, size);
+    var b = try deepseek_core.createVector(.f32, allocator, size);
+    var c = try deepseek_core.createVector(.f32, allocator, size);
+    defer a.deinit();
+    defer b.deinit();
+    defer c.deinit();
+
+    a.fillRandom(42);
+    b.fillRandom(123);
+
+    var timer = try std.time.Timer.start();
     for (0..iterations) |_| {
-        // SwiGLU: input * swish(gate)
-        for (0..size) |i| {
-            const g = gate[i];
-            const swish_g = g / (1.0 + @exp(-g));
-            output[i] = input[i] * swish_g;
+        try a.add(&b, &c);
+    }
+    const elapsed_ns = timer.read();
+
+    const elapsed_s = @as(f64, @floatFromInt(elapsed_ns)) / 1e9;
+    const operations_per_sec = @as(f64, @floatFromInt(size * iterations)) / elapsed_s;
+    const bandwidth_gb_s = operations_per_sec * @sizeOf(f32) * 3 / (1024 * 1024 * 1024); // 3x for read a, read b, write c
+
+    std.log.info("  ✅ {d:.1} GOp/s, {d:.1} GB/s bandwidth", .{ operations_per_sec / 1e9, bandwidth_gb_s });
+}
+
+fn runBlasBenchmarks(allocator: std.mem.Allocator) !void {
+    std.log.info("🧮 BLAS LIBRARY BENCHMARK", .{});
+    std.log.info("-------------------------", .{});
+
+    // Initialize BLAS and show detection results
+    const blas_context = deepseek_core.blas.Blas.init(allocator) catch {
+        std.log.info("⚠️ BLAS initialization failed, using naive implementation", .{});
+        return;
+    };
+
+    std.log.info("🔍 BLAS Detection Results:", .{});
+    std.log.info("  Backend: {}", .{blas_context.backend});
+    std.log.info("  Expected Peak Performance: {d:.1} GFLOPS", .{blas_context.performance_info.peak_gflops});
+    std.log.info("  Memory Bandwidth: {d:.1} GB/s", .{blas_context.performance_info.memory_bandwidth_gb_s});
+    std.log.info("  SIMD Width: {} bits", .{blas_context.performance_info.simd_width});
+    std.log.info("  Mixed Precision: {}", .{blas_context.performance_info.supports_mixed_precision});
+
+    // Run dedicated BLAS benchmark
+    std.log.info("", .{});
+    std.log.info("🚀 Running dedicated BLAS benchmark...", .{});
+    try deepseek_core.blas.benchmarkBlas(allocator);
+
+    std.log.info("", .{});
+}
+
+fn runMemoryBenchmarks(allocator: std.mem.Allocator) !void {
+    std.log.info("💾 MEMORY PERFORMANCE BENCHMARK", .{});
+    std.log.info("--------------------------------", .{});
+
+    try benchmarkMemoryBandwidth(allocator);
+    try benchmarkMemoryLatency(allocator);
+
+    std.log.info("", .{});
+}
+
+fn benchmarkMemoryBandwidth(allocator: std.mem.Allocator) !void {
+    const size = 128 * 1024 * 1024 / @sizeOf(f32); // 128MB of f32s
+    const iterations = 100;
+
+    std.log.info("📈 Memory Bandwidth Test - {} MB, {} iterations", .{ size * @sizeOf(f32) / (1024 * 1024), iterations });
+
+    const data = try allocator.alloc(f32, size);
+    defer allocator.free(data);
+
+    // Fill with data
+    for (data, 0..) |*ptr, i| {
+        ptr.* = @floatFromInt(i % 1000);
+    }
+
+    // Sequential read benchmark
+    var timer = try std.time.Timer.start();
+    var checksum: f64 = 0;
+    for (0..iterations) |_| {
+        for (data) |value| {
+            checksum += value;
         }
     }
-    
-    const end_time = std.time.nanoTimestamp();
-    const total_time = @as(u64, @intCast(end_time - start_time));
-    const avg_time = total_time / iterations;
-    
-    const total_elements = size * iterations;
-    const ops_per_second = @as(f64, @floatFromInt(total_elements)) / (@as(f64, @floatFromInt(total_time)) / 1_000_000_000.0);
-    
-    return BenchmarkResult{
-        .name = "SwiGLU Activation",
-        .iterations = iterations,
-        .total_time_ns = total_time,
-        .avg_time_ns = avg_time,
-        .ops_per_second = ops_per_second,
-        .memory_used_mb = (@as(f64, @floatFromInt(size)) * 3.0 * 4.0) / (1024.0 * 1024.0),
-    };
-}
+    const elapsed_ns = timer.read();
 
-/// Benchmark RMS normalization
-fn benchmarkRMSNorm(allocator: std.mem.Allocator) !BenchmarkResult {
-    const iterations = 1000;
-    const size = 4096; // Typical hidden dimension
-    
-    const input = try allocator.alloc(f32, size);
-    defer allocator.free(input);
-    
-    const weight = try allocator.alloc(f32, size);
-    defer allocator.free(weight);
-    
-    const output = try allocator.alloc(f32, size);
-    defer allocator.free(output);
-    
-    // Initialize data
-    for (input, weight) |*i, *w| {
-        i.* = 0.1;
-        w.* = 1.0;
-    }
-    
-    const start_time = std.time.nanoTimestamp();
-    
-    for (0..iterations) |_| {
-        deepseek_core.math.rms_norm.rmsNormVec(input, weight, output, 1e-6);
-    }
-    
-    const end_time = std.time.nanoTimestamp();
-    const total_time = @as(u64, @intCast(end_time - start_time));
-    const avg_time = total_time / iterations;
-    
-    const ops_per_second = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(total_time)) / 1_000_000_000.0);
-    
-    return BenchmarkResult{
-        .name = "RMS Normalization (SIMD)",
-        .iterations = iterations,
-        .total_time_ns = total_time,
-        .avg_time_ns = avg_time,
-        .ops_per_second = ops_per_second,
-        .memory_used_mb = (@as(f64, @floatFromInt(size)) * 3.0 * 4.0) / (1024.0 * 1024.0),
-    };
-}
+    const elapsed_s = @as(f64, @floatFromInt(elapsed_ns)) / 1e9;
+    const bytes_read = @as(f64, @floatFromInt(size * @sizeOf(f32) * iterations));
+    const bandwidth_gb_s = bytes_read / elapsed_s / (1024 * 1024 * 1024);
 
-/// Benchmark memory bandwidth
-fn benchmarkMemoryBandwidth(allocator: std.mem.Allocator) !BenchmarkResult {
-    const iterations = 100;
-    const size = 64 * 1024 * 1024; // 64MB
-    
-    const source = try allocator.alloc(u8, size);
-    defer allocator.free(source);
-    
-    const dest = try allocator.alloc(u8, size);
+    std.log.info("  ✅ Sequential Read: {d:.1} GB/s (checksum: {d:.1})", .{ bandwidth_gb_s, checksum });
+
+    // Memory copy benchmark
+    const dest = try allocator.alloc(f32, size);
     defer allocator.free(dest);
-    
-    // Fill source with data
-    @memset(source, 0x42);
-    
-    const start_time = std.time.nanoTimestamp();
-    
+
+    timer.reset();
     for (0..iterations) |_| {
-        @memcpy(dest, source);
+        @memcpy(dest, data);
     }
-    
-    const end_time = std.time.nanoTimestamp();
-    const total_time = @as(u64, @intCast(end_time - start_time));
-    const avg_time = total_time / iterations;
-    
-    const total_bytes = size * iterations;
-    const gb_per_second = (@as(f64, @floatFromInt(total_bytes)) / (@as(f64, @floatFromInt(total_time)) / 1_000_000_000.0)) / (1024.0 * 1024.0 * 1024.0);
-    
-    return BenchmarkResult{
-        .name = "Memory Bandwidth",
-        .iterations = iterations,
-        .total_time_ns = total_time,
-        .avg_time_ns = avg_time,
-        .ops_per_second = gb_per_second, // Actually GB/s
-        .memory_used_mb = (@as(f64, @floatFromInt(size)) * 2.0) / (1024.0 * 1024.0),
-    };
-} 
+    const copy_elapsed_ns = timer.read();
+
+    const copy_elapsed_s = @as(f64, @floatFromInt(copy_elapsed_ns)) / 1e9;
+    const copy_bandwidth_gb_s = bytes_read / copy_elapsed_s / (1024 * 1024 * 1024);
+
+    std.log.info("  ✅ Memory Copy: {d:.1} GB/s", .{copy_bandwidth_gb_s});
+}
+
+fn benchmarkMemoryLatency(allocator: std.mem.Allocator) !void {
+    const size = 1024 * 1024; // 1M elements
+    const iterations = 1000;
+
+    std.log.info("⏱️ Memory Latency Test - Random Access Pattern", .{});
+
+    const data = try allocator.alloc(u32, size);
+    defer allocator.free(data);
+
+    // Create random access pattern
+    var rng = std.Random.DefaultPrng.init(42);
+    for (data, 0..) |*ptr, i| {
+        ptr.* = @intCast(rng.random().uintLessThan(usize, size));
+        _ = i;
+    }
+
+    var timer = try std.time.Timer.start();
+    var index: u32 = 0;
+    for (0..iterations) |_| {
+        for (0..size) |_| {
+            index = data[index];
+        }
+    }
+    const elapsed_ns = timer.read();
+
+    const elapsed_s = @as(f64, @floatFromInt(elapsed_ns)) / 1e9;
+    const accesses_per_sec = @as(f64, @floatFromInt(size * iterations)) / elapsed_s;
+    const avg_latency_ns = elapsed_s * 1e9 / @as(f64, @floatFromInt(size * iterations));
+
+    std.log.info("  ✅ {d:.1} M accesses/s, {d:.1} ns avg latency (index: {})", .{ accesses_per_sec / 1e6, avg_latency_ns, index });
+}
