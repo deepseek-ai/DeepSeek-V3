@@ -24,9 +24,9 @@ pub const Backend = struct {
     type: BackendType,
     device_id: u32,
     allocator: Allocator,
-    
+
     const Self = @This();
-    
+
     pub fn init(allocator: Allocator, backend_type: BackendType, device_id: u32) Self {
         return Self{
             .type = backend_type,
@@ -34,12 +34,12 @@ pub const Backend = struct {
             .allocator = allocator,
         };
     }
-    
+
     pub fn deinit(self: *Self) void {
         // TODO: Backend-specific cleanup
         _ = self;
     }
-    
+
     pub fn capabilities(self: *const Self) Capabilities {
         return switch (self.type) {
             .cpu => Capabilities{
@@ -76,7 +76,7 @@ pub const Backend = struct {
             },
         };
     }
-    
+
     pub fn name(self: *const Self) []const u8 {
         return switch (self.type) {
             .cpu => "CPU",
@@ -85,4 +85,4 @@ pub const Backend = struct {
             .webgpu => "WebGPU",
         };
     }
-}; 
+};

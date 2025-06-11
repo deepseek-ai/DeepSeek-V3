@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2025 TriexDev
+
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {

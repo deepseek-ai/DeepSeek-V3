@@ -1,0 +1,50 @@
+# DeepZig V3 Commercial License
+
+© 2025 TriexDev
+
+## Commercial License Agreement
+
+This is a proprietary software license that permits use of DeepZig V3
+in commercial and proprietary applications.
+
+### Commercial License Benefits:
+- ✅ Use in proprietary/closed-source products
+- ✅ No GPL-3.0 copyleft obligations  
+- ✅ Distribute without source code disclosure
+- ✅ Warranty and support options available
+- ✅ Indemnification protection
+- ✅ Priority technical support
+
+### License Grant:
+Subject to the terms and payment of applicable license fees, TriexDev
+grants you a non-exclusive, non-transferable license to use, modify,
+and distribute DeepZig V3 in your commercial products.
+
+### What's Included:
+- Complete DeepZig V3 source code
+- Multi-Head Latent Attention implementation
+- BLAS-accelerated tensor operations
+- Cross-platform build system
+- Commercial use rights
+
+### Contact for Commercial Licensing:
+- **GitHub**: [@Triex](https://github.com/Triex)
+- **Email**: hi@triex.dev
+- **Enterprise Support**: Available upon request
+
+### Pricing:
+Commercial license fees vary based on:
+- Team size and usage scale
+- Support level required
+- Deployment scope
+- Custom development needs
+
+Contact us for a quote tailored to your needs.
+
+---
+
+**Note**: If you're using DeepZig V3 under the GPL-3.0 license,
+you don't need this commercial license unless you want to:
+- Use in proprietary software
+- Avoid GPL-3.0 copyleft requirements
+- Get commercial support/warranty

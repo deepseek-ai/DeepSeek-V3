@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2025 TriexDev
+
 // High-Performance BLAS Integration for DeepZig V3
 // Automatically detects and uses the fastest BLAS implementation per platform
 //

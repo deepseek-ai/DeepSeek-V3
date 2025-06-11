@@ -1,9 +1,13 @@
-const std = @import("std");
-const deepseek_core = @import("deepseek_core");
-const openai = @import("openai.zig");
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2025 TriexDev
 
+const std = @import("std");
 const Allocator = std.mem.Allocator;
 const http = std.http;
+
+const deepseek_core = @import("deepseek_core");
+
+const openai = @import("openai.zig");
 
 /// Handle chat completions endpoint (OpenAI compatible)
 pub fn chatCompletions(
@@ -13,9 +17,9 @@ pub fn chatCompletions(
 ) !void {
     _ = allocator;
     _ = model;
-    
+
     // For now, send a simple placeholder response
-    const response_json = 
+    const response_json =
         \\{
         \\  "id": "chatcmpl-123",
         \\  "object": "chat.completion", 
@@ -36,7 +40,7 @@ pub fn chatCompletions(
         \\  }
         \\}
     ;
-    
+
     try request.respond(response_json, .{
         .extra_headers = &.{
             .{ .name = "content-type", .value = "application/json" },
@@ -52,7 +56,7 @@ pub fn completions(
 ) !void {
     _ = allocator;
     _ = model;
-    
+
     try request.respond("Text completions not yet implemented", .{
         .status = .not_implemented,
     });
@@ -66,8 +70,8 @@ pub fn models(
 ) !void {
     _ = allocator;
     _ = model;
-    
-    const response_json = 
+
+    const response_json =
         \\{
         \\  "object": "list",
         \\  "data": [{
@@ -78,7 +82,7 @@ pub fn models(
         \\  }]
         \\}
     ;
-    
+
     try request.respond(response_json, .{
         .extra_headers = &.{
             .{ .name = "content-type", .value = "application/json" },
@@ -89,15 +93,15 @@ pub fn models(
 /// Handle health check endpoint
 pub fn health(allocator: Allocator, request: *http.Server.Request) !void {
     _ = allocator;
-    
-    const response_json = 
+
+    const response_json =
         \\{
         \\  "status": "healthy",
         \\  "timestamp": 1677652288,
         \\  "version": "0.1.0"
         \\}
     ;
-    
+
     try request.respond(response_json, .{
         .extra_headers = &.{
             .{ .name = "content-type", .value = "application/json" },
@@ -113,7 +117,7 @@ pub fn websocket(
 ) !void {
     _ = allocator;
     _ = model;
-    
+
     try request.respond("WebSocket not yet implemented", .{
         .status = .not_implemented,
     });
@@ -128,7 +132,7 @@ fn generateChatCompletion(
     // TODO: Implement actual generation
     _ = model;
     _ = chat_request;
-    
+
     const response = try allocator.create(openai.ChatCompletionResponse);
     response.* = openai.ChatCompletionResponse{
         .id = "chatcmpl-123",
@@ -151,6 +155,6 @@ fn generateChatCompletion(
             .total_tokens = 25,
         },
     };
-    
+
     return response;
-} 
+}

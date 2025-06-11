@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2025 TriexDev
+
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
