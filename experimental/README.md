@@ -233,14 +233,17 @@ Run benchmarks to measure performance:
 zig build bench
 ```
 
+**Hardware Context**: Benchmarks run on Apple M1 MacBook Pro (MacBookPro17,1) with 16GB unified memory, Zig 0.15.0-dev.703+597dd328e, debug build.
+
 Example output:
 ```
 🚀 DeepZig V3 Performance Benchmarks
 ==========================================
 
 Backend: CPU (SIMD optimized)
-Architecture: x86_64
-Thread count: 16
+Architecture: aarch64  
+Thread count: 8
+Hardware: Apple M1 MacBook Pro, 16GB unified memory
 
 Operation                      | Iterations |  Avg Time | Operations/s | Memory
 -------------------------------|------------|-----------|--------------|-------

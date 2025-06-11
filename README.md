@@ -27,7 +27,7 @@ A **DRAFT proposal & foundation** for implementing DeepSeek V3 in Zig to create 
 - ✅ SIMD-optimized tensor operations (draft implementation)
 - ✅ Cross-platform backend architecture
 - ✅ Initial memory management
-- ✅ **Apple Silicon M-series detection** (real hardware detection via sysctl)
+- ✅ **Apple Silicon M-series detection** (hardware detection via sysctl)
 - ✅ Comprehensive build system draft
 - ⚠️ **NOT PRODUCTION READY** - Draft implementation for research/development
 
@@ -157,7 +157,7 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 ### For the Current Zig Implementation:
 ```bash
 # Clone this repository
-git clone https://github.com/[current-repo-path]
+git clone https://github.com/Triex/DeepZig-V3
 cd DeepSeek-V3-Zig/experimental
 
 # Build and test the foundation
