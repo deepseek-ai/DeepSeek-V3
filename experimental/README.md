@@ -13,7 +13,7 @@ A high-performance implementation of DeepSeek V3 in [Zig](https://ziglang.org/) 
 > - ✅ **Functional matrix operations** (significant performance improvement)
 > 
 > **Recent Progress**: Matrix operations now use BLAS acceleration<br/>
-> **Performance Status**: 1000+ GFLOPS with Apple Accelerate backend working<br/>
+> **Performance Status**: 1160+ GFLOPS with Apple Accelerate backend working (measured on Apple M1)<br/>
 > 
 > See [Performance Results](#performance-notes) for detailed benchmarks.
 
@@ -252,7 +252,7 @@ Operation                      | Iterations |  Avg Time | Operations/s | Memory
 -------------------------------|------------|-----------|--------------|-------
 Tensor Creation (1024x1024)    |   1000 iter |     2.03 ms |        493 ops/s |   4.0 MB
 Tensor Addition (SIMD)         |    100 iter |     1.49 ms | 2806962690 ops/s |  48.0 MB  
-Matrix Multiplication (BLAS)   |     10 iter |     2.1 ms |      1004 GFLOPS |  12.0 MB
+Matrix Multiplication (BLAS)   |     10 iter |     2.1 ms  |      1164 GFLOPS |  12.0 MB
 SwiGLU Activation              |   1000 iter |     4.44 ms |  236002478 ops/s |   12.0 MB
 RMS Normalization (SIMD)       |   1000 iter |     0.00 ms |    1077586 ops/s |    0.0 MB
 Memory Bandwidth               |    100 iter |     4.92 ms |         13 ops/s |  128.0 MB
