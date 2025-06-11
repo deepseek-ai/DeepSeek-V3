@@ -13,7 +13,7 @@ A high-performance implementation of DeepSeek V3 in [Zig](https://ziglang.org/) 
 > - ✅ **Functional matrix operations** (significant performance improvement)
 > 
 > **Recent Progress**: Matrix operations now use BLAS acceleration<br/>
-> **Performance Status**: 1160+ GFLOPS with Apple Accelerate backend working (measured on Apple M1)<br/>
+> **Performance Status**: 1160+ GFLOPS with Apple Accelerate backend working (measured on Apple M1 Macbook)<br/>
 > 
 > See [Performance Results](#performance-notes) for detailed benchmarks.
 
@@ -27,7 +27,7 @@ This experimental implementation aims to leverage Zig's unique advantages for sy
 - **Single binary deployment** with no runtime dependencies
 - **Cross-platform compilation** for multiple architectures
 
-**🚀 BLAS Acceleration Achieved!** We've successfully integrated Apple Accelerate backend delivering **1000+ GFLOPS** performance - a **3000x speedup** over the initial naive implementation.
+**🚀 BLAS Acceleration Achieved!** We've successfully integrated Apple Accelerate backend delivering **1000+ GFLOPS** performance - a **3000x speedup** over the initial naive implementation. Measured on an M1 Macbook.
 
 **🔗 Related**: See the [main project README](../README.md) for architecture overview and vision.
 
@@ -309,7 +309,7 @@ This experimental implementation follows the same license as the original DeepSe
 - **Matrix 1024×1024**: 2.1ms/iter, **1004 GFLOPS** (38.6% efficiency)
 - **Matrix 2048×2048**: 21.5ms/iter, **799 GFLOPS** (30.7% efficiency)
 
-**Performance Improvement**: From **6418ms naive** → **2.1ms BLAS** = significant speedup for matrix operations
+**Performance Improvement**: From **6418ms naive** → **2.1ms BLAS** = significant speedup for matrix operations. Measured on an M1 Macbook.
 
 **System Status**:
 - ✅ **BLAS Backend**: Apple Accelerate integration working

@@ -53,7 +53,7 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 | Memory usage | 20-40GB | **< 16GB** | *16GB+ for basic ops* |
 | Dependencies | ~2GB runtime | **Single binary** | ✅ **Single binary** |
 | Deployment | Complex | **Copy & run** | ✅ **Copy & run** |
-| Matrix Mul (1024×1024) | ~1ms (optimized) | **< 1ms** | ✅ **2.1ms (1000+ GFLOPS)** |
+| Matrix Mul (1024×1024) | ~1ms (optimized) | **< 1ms** | ✅ **2.1ms (1000+ GFLOPS/M1 Macbook)** |
 
 *See [experimental benchmarks](experimental/README.md#benchmarks) for current performance measurements.*
 
@@ -103,7 +103,7 @@ Current LLM inference is dominated by Python/PyTorch, which introduces:
 - [x] **Updated to Zig 0.15.0-dev - compiles cleanly**
 - [x] **Benchmark suite** showing current performance
 - [x] **BLAS integration working** - Apple Accelerate backend functional
-- [x] **Improved matrix performance** - 1000+ GFLOPS operations
+- [x] **Improved matrix performance** - 1000+ GFLOPS operations on an M1 Macbook
 
 *📈 Performance improvement achieved - BLAS acceleration now working*
 
