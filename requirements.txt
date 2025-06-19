@@ -1,0 +1,6 @@
+# torch==2.7.1
+# triton==3.0.0  # Not available for Windows, comment out for compatibility
+# transformers==4.46.3
+# safetensors==0.4.5
+# The above packages are commented out because Triton is not available on Windows and the codebase is not compatible with Windows for full functionality.
+# To run this project, use a Linux environment with CUDA and Triton support, or a Linux-based Docker container with GPU support.
