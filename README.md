@@ -44,7 +44,7 @@
 
 ## 1. Introduction
 
-We present DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters, with 37B activated for each token. To achieve efficient inference and cost-effective training, DeepSeek-V3 adopts Multihead Latent Attention (MLA) and DeepSeek-MoE architectures, which were thoroughly validated in DeepSeek-V2. Furthermore, DeepSeek-V3 pioneers an auxiliary-loss-free strategy for load balancing and sets a multi-token prediction training objective for stronger performance. We pre-train DeepSeek-V3 on 14.8 trillion diverse and high-quality tokens, followed by Supervised Fine-Tuning and Reinforcement Learning stages to fully harness its capabilities. Comprehensive evaluations reveal that DeepSeek-V3 outperforms other open-source models and achieves performance comparable to leading closed-source models. Despite its excellent performance, DeepSeek-V3 requires only 2.788M H800 GPU hours for its full training. In addition, its training process is remarkably stable. Throughout the entire training process, we did not experience any irrecoverable loss spikes or perform any rollbacks.
+DeepSeek-V3 is a powerful language model with 671 billion parameters, activating 37 billion for each token. It uses Multihead Latent Attention and DeepSeek-MoE architectures to ensure efficient training and inference. The model introduces a load-balancing strategy and pre-trains on 14.8 trillion tokens. Evaluations show it outperforms many models while needing just 2.788 million GPU hours for training. The training process remained stable with no major issues.
 <p align="center">
   <img width="80%" src="figures/benchmark.png">
 </p>
