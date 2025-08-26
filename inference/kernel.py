@@ -7,7 +7,7 @@ from triton import Config
 
 
 @triton.jit
-def act_quant_kernel(x_ptr, y_ptr, s_ptr, BLOCK_SIZE: tl.constexpr):
+def act_quant_kernel(x_ptr: triton.Pointer, y_ptr: triton.Pointer, s_ptr: triton.Pointer, BLOCK_SIZE: tl.constexpr) -> None:
     """
     Quantizes the input tensor `x_ptr` and stores the result in `y_ptr` and the scaling factor in `s_ptr`.
 
@@ -53,7 +53,7 @@ def act_quant(x: torch.Tensor, block_size: int = 128) -> Tuple[torch.Tensor, tor
 
 
 @triton.jit
-def weight_dequant_kernel(x_ptr, s_ptr, y_ptr, M, N, BLOCK_SIZE: tl.constexpr):
+def weight_dequant_kernel(x_ptr: tl.pointer, s_ptr: tl.pointer, y_ptr: tl.pointer, M: int, N: int, BLOCK_SIZE: tl.constexpr) -> None:
     """
     Dequantizes weights using the provided scaling factors and stores the result.
 
@@ -112,12 +112,12 @@ fp8_gemm_configs = [
 
 @triton.autotune(configs=fp8_gemm_configs, key=['N', 'K'])
 @triton.jit
-def fp8_gemm_kernel(a_ptr, b_ptr, c_ptr,
-                    a_s_ptr, b_s_ptr,
+def fp8_gemm_kernel(a_ptr: tl.tensor, b_ptr: tl.tensor, c_ptr:tl.tensor,
+                    a_s_ptr: tl.tensor, b_s_ptr: tl.tensor,
                     M, N: tl.constexpr, K: tl.constexpr,
                     BLOCK_SIZE_M: tl.constexpr,
                     BLOCK_SIZE_N: tl.constexpr,
-                    BLOCK_SIZE_K: tl.constexpr):
+                    BLOCK_SIZE_K: tl.constexpr) -> None:
     """
     Performs a matrix multiplication operation on FP8 matrices with scaling factors.
 
@@ -167,7 +167,7 @@ def fp8_gemm_kernel(a_ptr, b_ptr, c_ptr,
     tl.store(c_ptrs, c, mask=mask)
 
 
-def fp8_gemm(a: torch.Tensor, a_s: torch.Tensor, b: torch.Tensor, b_s: torch.Tensor):
+def fp8_gemm(a: torch.Tensor, a_s: torch.Tensor, b: torch.Tensor, b_s: torch.Tensor) -> torch.Tensor:
     """
     Perform a matrix multiplication using FP8 precision.
 

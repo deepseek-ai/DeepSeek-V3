@@ -11,7 +11,7 @@ from safetensors.torch import load_model
 from model import Transformer, ModelArgs
 
 
-def sample(logits, temperature: float = 1.0):
+def sample(logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
     """
     Samples a token from the logits using temperature scaling.
 

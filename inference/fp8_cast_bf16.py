@@ -9,7 +9,7 @@ from safetensors.torch import load_file, save_file
 
 from kernel import weight_dequant
 
-def main(fp8_path, bf16_path):
+def main(fp8_path: str, bf16_path: str) -> None:
     """
     Converts FP8 weights to BF16 and saves the converted weights.
 
@@ -41,7 +41,7 @@ def main(fp8_path, bf16_path):
     fp8_weight_names = []
 
     # Helper function to get tensor from the correct file
-    def get_tensor(tensor_name):
+    def get_tensor(tensor_name: str) -> torch.Tensor:
         """
         Retrieves a tensor from the cached safetensor files or loads it from disk if not cached.
 
