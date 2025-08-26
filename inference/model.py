@@ -143,8 +143,8 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
         quantization-aware computations depending on the input parameters.
 
     Notes:
-        - If `weight` is quantized (e.g., `element_size() == 1`), a dequantized version 
-          is used for computation.
+        - If `weight` is in a higher precision format (e.g., float32 or bfloat16), then `element_size() > 1`, and the original
+          weight tensor is used for computation.
         - If `gemm_impl == "bf16"`, dequantization and a `bf16` GEMM operation are applied.
         - For other cases, the function applies quantization to `x` and uses `fp8_gemm` for computation.
     """
