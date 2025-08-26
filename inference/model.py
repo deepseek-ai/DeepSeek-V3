@@ -25,6 +25,7 @@ class ModelArgs:
         max_batch_size (int): Maximum batch size.
         max_seq_len (int): Maximum sequence length.
         dtype (Literal["bf16", "fp8"]): Data type for computations.
+        scale_fmt (Optional[str]): Format for quantization scale.
         vocab_size (int): Vocabulary size.
         dim (int): Model dimension.
         inter_dim (int): Intermediate dimension for MLP layers.
@@ -54,6 +55,7 @@ class ModelArgs:
     max_batch_size: int = 8
     max_seq_len: int = 4096 * 4
     dtype: Literal["bf16", "fp8"] = "bf16"
+    scale_fmt: Optional[str] = None
     vocab_size: int = 102400
     dim: int = 2048
     inter_dim: int = 10944
@@ -82,6 +84,12 @@ class ModelArgs:
     beta_fast: int = 32
     beta_slow: int = 1
     mscale: float = 1.
+
+global_args: Optional[ModelArgs] = None
+
+def set_global_args(args: ModelArgs):
+    global global_args
+    global_args = args
 
 
 class ParallelEmbedding(nn.Module):
@@ -154,7 +162,8 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
         weight = weight_dequant(weight, weight.scale)
         return F.linear(x, weight, bias)
     else:
-        x, scale = act_quant(x, block_size)
+        assert global_args is not None, "global_args is required for fp8_gemm"
+        x, scale = act_quant(x, block_size, global_args.scale_fmt)
         y = fp8_gemm(x, scale, weight, weight.scale)
         if bias is not None:
             y += bias

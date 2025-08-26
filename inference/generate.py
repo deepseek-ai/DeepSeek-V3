@@ -8,7 +8,7 @@ import torch.distributed as dist
 from transformers import AutoTokenizer
 from safetensors.torch import load_model
 
-from model import Transformer, ModelArgs
+from model import Transformer, ModelArgs, set_global_args
 
 
 def sample(logits, temperature: float = 1.0):
@@ -110,7 +110,12 @@ def main(
     torch.set_num_threads(8)
     torch.manual_seed(965)
     with open(config) as f:
-        args = ModelArgs(**json.load(f))
+        config_dict = json.load(f)
+        args = ModelArgs(**config_dict)
+        quantization_config = config_dict.get("quantization_config", None)
+        if quantization_config is not None:
+            args.scale_fmt = quantization_config.get("scale_fmt", None)
+        set_global_args(args)
     print(args)
     with torch.device("cuda"):
         model = Transformer(args)
