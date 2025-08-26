@@ -112,10 +112,6 @@ def main(
     with open(config) as f:
         config_dict = json.load(f)
         args = ModelArgs(**config_dict)
-        quantization_config = config_dict.get("quantization_config", None)
-        if quantization_config is not None:
-            args.scale_fmt = quantization_config.get("scale_fmt", None)
-        set_global_args(args)
     print(args)
     with torch.device("cuda"):
         model = Transformer(args)
