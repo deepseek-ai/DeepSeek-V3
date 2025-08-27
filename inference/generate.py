@@ -30,10 +30,11 @@ def sample(logits, temperature: float = 1.0):
 @torch.inference_mode()
 def generate(
     model: Transformer,
+    device: str,
     prompt_tokens: List[List[int]],
     max_new_tokens: int,
     eos_id: int,
-    temperature: float = 1.0
+    temperature: float = 1.0,
 ) -> List[List[int]]:
     """
     Generates new tokens based on the given prompt tokens using the specified model.
@@ -51,11 +52,11 @@ def generate(
     prompt_lens = [len(t) for t in prompt_tokens]
     assert max(prompt_lens) <= model.max_seq_len, f"Prompt length exceeds model maximum sequence length (max_seq_len={model.max_seq_len})"
     total_len = min(model.max_seq_len, max_new_tokens + max(prompt_lens))
-    tokens = torch.full((len(prompt_tokens), total_len), -1, dtype=torch.long, device="cuda")
+    tokens = torch.full((len(prompt_tokens), total_len), -1, dtype=torch.long, device=device)
     for i, t in enumerate(prompt_tokens):
-        tokens[i, :len(t)] = torch.tensor(t, dtype=torch.long, device="cuda")
+        tokens[i, :len(t)] = torch.tensor(t, dtype=torch.long, device=device)
     prev_pos = 0
-    finished = torch.tensor([False] * len(prompt_tokens), device="cuda")
+    finished = torch.tensor([False] * len(prompt_tokens), device=device)
     prompt_mask = tokens != -1
     for cur_pos in range(min(prompt_lens), total_len):
         logits = model.forward(tokens[:, prev_pos:cur_pos], prev_pos)
@@ -97,11 +98,20 @@ def main(
         max_new_tokens (int, optional): Maximum number of new tokens to generate. Defaults to 100.
         temperature (float, optional): Temperature for sampling. Defaults to 1.0.
     """
+    if torch.cuda.is_available():
+        default_device = "cuda"
+    elif torch.mps.is_available():
+        default_device = "mps"
+    else:
+        default_device = "cpu"
     world_size = int(os.getenv("WORLD_SIZE", "1"))
     rank = int(os.getenv("RANK", "0"))
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
     if world_size > 1:
-        dist.init_process_group("nccl")
+        if torch.cuda.is_available():
+            dist.init_process_group("nccl")
+        else:
+            dist.init_process_group("gloo")
     global print
     if rank != 0:
         print = lambda *_, **__: None
@@ -112,10 +122,10 @@ def main(
     with open(config) as f:
         args = ModelArgs(**json.load(f))
     print(args)
-    with torch.device("cuda"):
+    with torch.device(default_device):
         model = Transformer(args)
     tokenizer = AutoTokenizer.from_pretrained(ckpt_path)
-    tokenizer.decode(generate(model, [tokenizer.encode("DeepSeek")], 2, -1, 1.)[0])
+    tokenizer.decode(generate(model, [tokenizer.encode("DeepSeek")], 2, -1, 1.)[0], default_device)
     load_model(model, os.path.join(ckpt_path, f"model{rank}-mp{world_size}.safetensors"))
 
     if interactive:
