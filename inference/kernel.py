@@ -37,7 +37,7 @@ def act_quant_kernel(x_ptr, y_ptr, s_ptr, BLOCK_SIZE: tl.constexpr, scale_fmt: t
 
 def act_quant(x: torch.Tensor, block_size: int = 128, scale_fmt: Optional[str] = None) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    Quantizes the input tensor `x` using block-wise quantization.
+    Quantizes the input tensor `x` using block-wise quantization as implemented in the given function.
 
     Args:
         x (torch.Tensor): The input tensor to be quantized. Must be contiguous and its last dimension size must be divisible by `block_size`.
