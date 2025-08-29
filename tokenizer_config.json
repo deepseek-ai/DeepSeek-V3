@@ -1,0 +1,35 @@
+{
+  "add_bos_token": false,
+  "add_eos_token": false,
+  "bos_token": {
+    "__type": "AddedToken",
+    "content": "<｜begin of sentence｜>",
+    "lstrip": false,
+    "normalized": true,
+    "rstrip": false,
+    "single_word": false
+  },
+  "chat_template": "{% set ns = namespace(found=false, is_first=false, is_tool=false) %}\n{%- for message in messages %}\n  {%- if message['role'] == 'system' %}\n    {{ '<｜begin of sentence｜><｜system｜>' + message['content'] + '<｜end of sentence｜>' }}\n  {%- elif message['role'] == 'user' %}\n    {%- if message.get('content') and message.get('tool_results') %}\n      {{ '<｜begin of sentence｜><｜User｜>' + message['content'] }}\n      {%- for result in message['tool_results'] %}\n        {{ '\n<｜tool result begin｜>' + result['name'] + '\n```json\n' + result['result'] + '\n```<｜tool result end｜>' }}\n      {%- endfor %}\n      {{ '<｜end of sentence｜>' }}\n    {%- elif message.get('content') %}\n      {{ '<｜begin of sentence｜><｜User｜>' + message['content'] + '<｜end of sentence｜>' }}\n    {%- endif %}\n  {%- elif message['role'] == 'assistant' %}\n    {%- if message.get('content') is none or message.get('content') == '' %}\n      {%- set ns.is_tool = false -%}\n      {%- for tool in message.get('tool_calls', []) %}\n        {%- if not ns.is_first %}\n          {{ '<｜Assistant｜><｜tool calls begin｜><｜tool call begin｜>' + tool['type'] + '<｜tool sep｜>' + tool['function']['name'] + '\n```json\n' + (tool['function']['arguments']|tojson) + '\n```<｜tool call end｜>' }}\n          {%- set ns.is_first = true -%}\n        {%- else %}\n          {{ '\n<｜tool call begin｜>' + tool['type'] + '<｜tool sep｜>' + tool['function']['name'] + '\n```json\n' + (tool['function']['arguments']|tojson) + '\n```<｜tool call end｜>' }}\n          {{ '<｜tool calls end｜><｜end of sentence｜>' }}\n        {%- endif %}\n      {%- endfor %}\n    {%- else %}\n      {{ '<｜begin of sentence｜><｜Assistant｜>' + message['content'] + '<｜end of sentence｜>' }}\n    {%- endif %}\n  {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n  {{ '<｜begin of sentence｜><｜Assistant｜>' }}\n{%- endif %}\n",
+  "clean_up_tokenization_spaces": true,
+  "model_max_length": 131072,
+  "eos_token": {
+    "__type": "AddedToken",
+    "content": "<｜end of sentence｜>",
+    "lstrip": false,
+    "normalized": true,
+    "rstrip": false,
+    "single_word": false
+  },
+  "tokenizer_class": "CodeLlamaTokenizer",
+  "pad_token": null,
+  "special_tokens_map_file": null,
+  "tokenizer_file": "tokenizer.json",
+  "unk_token": {
+    "__type": "AddedToken",
+    "content": "<｜unknown｜>",
+    "lstrip": false,
+    "normalized": true,
+    "rstrip": false,
+    "single_word": false
+  }
+}
