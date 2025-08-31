@@ -3,6 +3,7 @@ import json
 from argparse import ArgumentParser
 from glob import glob
 from tqdm import tqdm
+import gc
 
 import torch
 from safetensors.torch import load_file, save_file
@@ -30,6 +31,12 @@ def main(fp8_path, bf16_path):
     - The function updates the model index file to remove references to scale_inv tensors.
     """
     torch.set_default_dtype(torch.bfloat16)
+    if torch.cuda.is_available():
+        default_device = "cuda"
+    elif torch.mps.is_available():
+        default_device = "mps"
+    else:
+        default_device = "cpu"
     os.makedirs(bf16_path, exist_ok=True)
     model_index_file = os.path.join(fp8_path, "model.safetensors.index.json")
     with open(model_index_file, "r") as f:
@@ -57,14 +64,14 @@ def main(fp8_path, bf16_path):
         file_name = weight_map[tensor_name]
         if file_name not in loaded_files:
             file_path = os.path.join(fp8_path, file_name)
-            loaded_files[file_name] = load_file(file_path, device="cuda")
+            loaded_files[file_name] = load_file(file_path, device=default_device)
         return loaded_files[file_name][tensor_name]
 
     safetensor_files = list(glob(os.path.join(fp8_path, "*.safetensors")))
     safetensor_files.sort()
     for safetensor_file in tqdm(safetensor_files):
         file_name = os.path.basename(safetensor_file)
-        current_state_dict = load_file(safetensor_file, device="cuda")
+        current_state_dict = load_file(safetensor_file, device=default_device)
         loaded_files[file_name] = current_state_dict
         
         new_state_dict = {}
@@ -91,7 +98,12 @@ def main(fp8_path, bf16_path):
         if len(loaded_files) > 2:
             oldest_file = next(iter(loaded_files))
             del loaded_files[oldest_file]
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            elif torch.mps.is_available():
+                torch.mps.empty_cache()
+            else:
+                gc.collect()
     
     # Update model index
     new_model_index_file = os.path.join(bf16_path, "model.safetensors.index.json")
