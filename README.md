@@ -340,11 +340,42 @@ In collaboration with the AMD team, we have achieved Day-One support for AMD GPU
 ### 6.8 Recommended Inference Functionality with Huawei Ascend NPUs
 The [MindIE](https://www.hiascend.com/en/software/mindie) framework from the Huawei Ascend community has successfully adapted the BF16 version of DeepSeek-V3. For step-by-step guidance on Ascend NPUs, please follow the [instructions here](https://modelers.cn/models/MindIE/deepseekv3).
 
+## 7. Troubleshooting
 
-## 7. License
+### Common Issues and Solutions
+
+1. **Issue: Model weights not found**  
+   **Solution:** Ensure you have downloaded the **DeepSeek-V3 model weights** from [Hugging Face](https://huggingface.co/deepseek-ai/DeepSeek-V3) and placed them in the correct directory as specified in the [How to Run Locally](#6-how-to-run-locally) instructions.
+
+2. **Issue: Inference script fails with a CUDA error**  
+   **Solution:** Verify the following:  
+   - The correct version of **CUDA** is installed.  
+   - GPU drivers are up to date.  
+   - **PyTorch** is correctly configured to use CUDA.  
+   For more detailed guidance, refer to the official [PyTorch CUDA Troubleshooting Guide](https://pytorch.org/docs/stable/notes/cuda.html).  
+
+3. **Issue: Slow performance during inference**  
+   **Solution:** Ensure optimal performance using these tips:  
+   - Use FP8 or BF16 modes if supported by your hardware (see [How to Run Locally](#6-how-to-run-locally) for setup details).  
+   - Review [PyTorch Performance Tuning](https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html) for further optimization strategies.  
+
+4. **Issue: Out of memory error**  
+   **Solution:**  
+   - Reduce the batch size to fit your GPU memory.  
+   - Utilize a **model parallelism strategy** to distribute memory usage across multiple GPUs.  
+   - For multi-GPU setups, consult the [PyTorch Distributed Training Documentation](https://pytorch.org/tutorials/beginner/dist_overview.html).  
+
+### Before Reporting an Issue
+
+We encourage you to carefully follow the setup and usage instructions provided in this README to ensure proper configuration of DeepSeek-V3.
+
+If you encounter any issues not listed in the **Troubleshooting** section, or if you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com). Be sure to include as much detail as possible about your setup and the problem you're experiencing. This helps us assist you more effectively.
+
+
+## 8. License
 This code repository is licensed under [the MIT License](LICENSE-CODE). The use of DeepSeek-V3 Base/Chat models is subject to [the Model License](LICENSE-MODEL). DeepSeek-V3 series (including Base and Chat) supports commercial use.
 
-## 8. Citation
+## 9. Citation
 ```
 @misc{deepseekai2024deepseekv3technicalreport,
       title={DeepSeek-V3 Technical Report}, 
@@ -357,5 +388,5 @@ This code repository is licensed under [the MIT License](LICENSE-CODE). The use 
 }
 ```
 
-## 9. Contact
+## 10. Contact
 If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).
