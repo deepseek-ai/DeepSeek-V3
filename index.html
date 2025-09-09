@@ -1,0 +1,3571 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Head section remains the same -->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Message Tracking System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* All existing CSS remains the same */
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #dbeafe;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #06b6d4;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --whatsapp: #25D366;
+      --whatsapp-dark: #128C7E;
+      --crispy-red: #ff6b6b;
+      --crispy-orange: #feca57;
+    }
+    /* All existing CSS rules remain the same */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    /* All existing CSS rules remain the same */
+    
+    /* New CSS for improvements */
+    .quick-stats {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .quick-stat-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      flex: 1;
+      min-width: 150px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    
+    .quick-stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .quick-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    
+    .quick-stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    
+    .recent-activity {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .activity-item {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+    
+    .activity-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .activity-icon.sent {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    
+    .activity-icon.delivered {
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--info);
+    }
+    
+    .activity-icon.failed {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+    
+    .activity-icon.crispy {
+      background: rgba(255, 107, 107, 0.1);
+      color: var(--crispy-red);
+    }
+    
+    .activity-content {
+      flex: 1;
+    }
+    
+    .activity-title {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+    
+    .activity-time {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    
+    .bulk-actions {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .dark-mode {
+      --bg: #1e293b;
+      --surface: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #475569;
+    }
+    
+    .dark-mode .card {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+    
+    .dark-mode .form-control, 
+    .dark-mode .form-select {
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--text-primary);
+    }
+    
+    .dark-mode .table {
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+    
+    .dark-mode .table thead {
+      background: rgba(37, 99, 235, 0.2);
+    }
+    
+    .dark-mode .table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--danger);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .message-simulation {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .simulation-controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .simulation-log {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.875rem;
+    }
+    
+    .log-entry {
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .log-time {
+      color: var(--text-secondary);
+      margin-right: 0.5rem;
+    }
+    
+    .log-status {
+      font-weight: 500;
+    }
+    
+    .log-status.success {
+      color: var(--success);
+    }
+    
+    .log-status.error {
+      color: var(--danger);
+    }
+    
+    .log-status.info {
+      color: var(--info);
+    }
+    
+    .log-status.warning {
+      color: var(--warning);
+    }
+    
+    .customer-search {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    
+    .customer-search input {
+      padding-left: 2.5rem;
+    }
+    
+    .customer-search i {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+    }
+    
+    .customer-filters {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .customer-filter-btn {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .customer-filter-btn:hover {
+      background: var(--primary-light);
+    }
+    
+    .customer-filter-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .customer-item.selected {
+      background: var(--primary-light);
+    }
+    
+    .bulk-customer-actions {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+    
+    .bulk-customer-actions.active {
+      display: block;
+    }
+    
+    .offer-scheduler {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .scheduled-offers {
+      margin-top: 1rem;
+    }
+    
+    .scheduled-offer-item {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .scheduled-offer-info {
+      flex: 1;
+    }
+    
+    .scheduled-offer-time {
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+    
+    .scheduled-offer-message {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .scheduled-offer-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="main-container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="page-title">Message Tracking System</h1>
+          <p class="page-subtitle">Monitor and track all message delivery status with real-time analytics</p>
+        </div>
+        <div class="d-flex gap-3">
+          <button class="btn btn-light" onclick="exportReport()">
+            <i class="bi bi-download"></i> Export Report
+          </button>
+          <button class="btn btn-light position-relative" onclick="showNotifications()">
+            <i class="bi bi-bell"></i> Notifications
+            <span class="notification-badge" id="notificationBadge">3</span>
+          </button>
+          <button class="btn btn-light" onclick="toggleDarkMode()">
+            <i class="bi bi-moon-stars" id="darkModeIcon"></i>
+          </button>
+          <button class="btn btn-light" onclick="showSettings()">
+            <i class="bi bi-gear"></i> Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-container">
+    <!-- Quick Stats Section -->
+    <div class="quick-stats">
+      <div class="quick-stat-card">
+        <div class="quick-stat-value" id="todaySent">0</div>
+        <div class="quick-stat-label">Today's Sent</div>
+      </div>
+      <div class="quick-stat-card">
+        <div class="quick-stat-value" id="todayDelivered">0</div>
+        <div class="quick-stat-label">Today's Delivered</div>
+      </div>
+      <div class="quick-stat-card">
+        <div class="quick-stat-value" id="todayFailed">0</div>
+        <div class="quick-stat-label">Today's Failed</div>
+      </div>
+      <div class="quick-stat-card">
+        <div class="quick-stat-value" id="todayOffers">0</div>
+        <div class="quick-stat-label">Today's Offers</div>
+      </div>
+    </div>
+
+    <!-- Customer Management Section -->
+    <div class="customer-section">
+      <div class="customer-header">
+        <h2 class="customer-title">
+          <i class="bi bi-people"></i> Customer Management
+        </h2>
+        <div>
+          <button class="btn btn-sm btn-primary" onclick="toggleCustomerForm()">
+            <i class="bi bi-plus"></i> Add Customer
+          </button>
+          <button class="btn btn-sm btn-success" onclick="showUploadModal()">
+            <i class="bi bi-upload"></i> Upload Data
+          </button>
+        </div>
+      </div>
+      <div class="customer-body">
+        <!-- Add Customer Form -->
+        <div class="customer-form" id="customerForm" style="display: none;">
+          <h5 class="mb-3">Add New Customer</h5>
+          <form id="addCustomerForm">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="customerName" class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="customerName" required>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="customerPhone" class="form-label">Phone Number</label>
+                <input type="tel" class="form-control" id="customerPhone" required>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="customerEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="customerEmail">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="customerCity" class="form-label">City</label>
+                <input type="text" class="form-control" id="customerCity">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="customerStatus" class="form-label">Status</label>
+                <select class="form-select" id="customerStatus">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Save Customer
+              </button>
+              <button type="button" class="btn btn-outline-secondary" onclick="toggleCustomerForm()">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Customer Search and Filters -->
+        <div class="customer-search">
+          <i class="bi bi-search"></i>
+          <input type="text" class="form-control" id="customerSearchInput" placeholder="Search customers...">
+        </div>
+        
+        <div class="customer-filters">
+          <button class="customer-filter-btn active" data-filter="all">All Customers</button>
+          <button class="customer-filter-btn" data-filter="active">Active</button>
+          <button class="customer-filter-btn" data-filter="inactive">Inactive</button>
+          <button class="customer-filter-btn" data-filter="dubai">Dubai</button>
+          <button class="customer-filter-btn" data-filter="abudhabi">Abu Dhabi</button>
+          <button class="customer-filter-btn" data-filter="sharjah">Sharjah</button>
+        </div>
+        
+        <!-- Bulk Actions -->
+        <div class="bulk-customer-actions" id="bulkCustomerActions">
+          <h6>Bulk Actions</h6>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-success" onclick="bulkChangeStatus('active')">
+              <i class="bi bi-check-circle"></i> Set Active
+            </button>
+            <button class="btn btn-sm btn-warning" onclick="bulkChangeStatus('inactive')">
+              <i class="bi bi-x-circle"></i> Set Inactive
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="bulkDeleteCustomers()">
+              <i class="bi bi-trash"></i> Delete Selected
+            </button>
+            <button class="btn btn-sm btn-primary" onclick="bulkSendOffer()">
+              <i class="bi bi-send"></i> Send Offer
+            </button>
+          </div>
+        </div>
+        
+        <!-- Customer List -->
+        <div class="customer-list" id="customerList">
+          <!-- Customers will be populated here -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- WhatsApp Offer System -->
+    <div class="whatsapp-offer">
+      <div class="whatsapp-offer-header">
+        <div>
+          <h2 class="whatsapp-offer-title">
+            <i class="bi bi-whatsapp"></i> WhatsApp Offer System
+          </h2>
+          <p>Send promotional offers to all customers via WhatsApp Business</p>
+        </div>
+        <div>
+          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" width="50">
+        </div>
+      </div>
+      <div class="whatsapp-offer-form">
+        <form id="whatsappOfferForm">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="whatsappNumber" class="whatsapp-offer-label">WhatsApp Business Number</label>
+              <input type="text" class="form-control whatsapp-offer-input" id="whatsappNumber" value="0501882206">
+            </div>
+            <div class="col-md-6">
+              <label class="whatsapp-offer-label">Customers Count</label>
+              <input type="text" class="form-control whatsapp-offer-input" id="customerCount" readonly>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="whatsapp-offer-label">Offer Templates</label>
+            <div class="template-selector">
+              <button type="button" class="template-btn active" onclick="selectTemplate('crispy')">CRISPY CHICKEN Offer</button>
+              <button type="button" class="template-btn" onclick="selectTemplate('special')">Special Discount</button>
+              <button type="button" class="template-btn" onclick="selectTemplate('new')">New Product</button>
+              <button type="button" class="template-btn" onclick="selectTemplate('custom')">Custom Template</button>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="offerMessage" class="whatsapp-offer-label">Offer Message</label>
+            <textarea class="form-control whatsapp-offer-textarea" id="offerMessage" rows="10">🔥 CRISPY CHICKEN - ULTIMATE OFFER 🔥
+🍗 12 Crispy Chicken Pieces + 3 Garlic Sauce
+Only 30 AED
+⏰ Valid: Monday & Tuesday Only
+🎁 Special Bonus!
+Get a FREE drink with every order above 50 AED!
+📞 To Order Directly: 600527488
+Order Now!
+⏳ Limited Time!
+Order within 2 hours only!
+👉 Share with friends & get extra discount!
+#CrispyChicken #SpecialOffer #CrispyChickenDeal</textarea>
+          </div>
+          
+          <!-- Offer Scheduler -->
+          <div class="offer-scheduler">
+            <h5 class="mb-3">Schedule Offer</h5>
+            <div class="row">
+              <div class="col-md-6">
+                <label for="scheduleDate" class="whatsapp-offer-label">Date</label>
+                <input type="date" class="form-control whatsapp-offer-input" id="scheduleDate">
+              </div>
+              <div class="col-md-6">
+                <label for="scheduleTime" class="whatsapp-offer-label">Time</label>
+                <input type="time" class="form-control whatsapp-offer-input" id="scheduleTime">
+              </div>
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="scheduleOffer">
+              <label class="form-check-label" for="scheduleOffer">
+                Schedule this offer for later
+              </label>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="whatsapp-offer-label">Message Preview</label>
+            <div class="offer-preview">
+              <div class="offer-preview-title">CRISPY CHICKEN Offer Preview</div>
+              <div class="offer-preview-content" id="offerPreview">🔥 CRISPY CHICKEN - ULTIMATE OFFER 🔥
+🍗 12 Crispy Chicken Pieces + 3 Garlic Sauce
+Only 30 AED
+⏰ Valid: Monday & Tuesday Only
+🎁 Special Bonus!
+Get a FREE drink with every order above 50 AED!
+📞 To Order Directly: 600527488
+Order Now!
+⏳ Limited Time!
+Order within 2 hours only!
+👉 Share with friends & get extra discount!
+#CrispyChicken #SpecialOffer #CrispyChickenDeal</div>
+            </div>
+          </div>
+          
+          <!-- Scheduled Offers -->
+          <div class="scheduled-offers" id="scheduledOffers" style="display: none;">
+            <h5 class="mb-3">Scheduled Offers</h5>
+            <div id="scheduledOffersList">
+              <!-- Scheduled offers will be populated here -->
+            </div>
+          </div>
+          
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="whatsapp-stats">
+              <div class="whatsapp-stat">
+                <div class="whatsapp-stat-value" id="totalSentOffers">0</div>
+                <div class="whatsapp-stat-label">Offers Sent</div>
+              </div>
+              <div class="whatsapp-stat">
+                <div class="whatsapp-stat-value" id="totalDeliveredOffers">0</div>
+                <div class="whatsapp-stat-label">Delivered</div>
+              </div>
+              <div class="whatsapp-stat">
+                <div class="whatsapp-stat-value" id="totalFailedOffers">0</div>
+                <div class="whatsapp-stat-label">Failed</div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-crispy">
+              <i class="bi bi-send"></i> Send Offer to All Customers
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Statistics Dashboard -->
+    <div class="stats-grid">
+      <div class="stat-card customers">
+        <div class="stat-value" id="totalCustomers">0</div>
+        <div class="stat-label">Total Customers</div>
+        <div class="stat-change positive">
+          <i class="bi bi-arrow-up"></i> +5% this week
+        </div>
+      </div>
+      <div class="stat-card sent">
+        <div class="stat-value" id="totalSent">0</div>
+        <div class="stat-label">Messages Sent</div>
+        <div class="stat-change positive">
+          <i class="bi bi-arrow-up"></i> +15% from yesterday
+        </div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-value" id="totalPending">0</div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-change">
+          <i class="bi bi-clock"></i> Processing...
+        </div>
+      </div>
+      <div class="stat-card delivered">
+        <div class="stat-value" id="totalDelivered">0</div>
+        <div class="stat-label">Delivered</div>
+        <div class="stat-change positive">
+          <i class="bi bi-arrow-up"></i> 92% success rate
+        </div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-value" id="totalFailed">0</div>
+        <div class="stat-label">Failed</div>
+        <div class="stat-change negative">
+          <i class="bi bi-arrow-down"></i> 8% failure rate
+        </div>
+      </div>
+      <div class="stat-card crispy">
+        <div class="stat-value" id="totalCrispy">0</div>
+        <div class="stat-label">CRISPY Offers</div>
+        <div class="stat-change positive">
+          <i class="bi bi-arrow-up"></i> Hot deals!
+        </div>
+      </div>
+    </div>
+    
+    <!-- Charts and Recent Activity -->
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <i class="bi bi-graph-up"></i> Delivery Analytics
+            </h2>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="deliveryChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <i class="bi bi-activity"></i> Recent Activity
+            </h2>
+          </div>
+          <div class="card-body">
+            <div class="recent-activity" id="recentActivity">
+              <!-- Recent activity will be populated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Message Simulation Section -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-cpu"></i> Message Delivery Simulation
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="simulation-controls">
+          <button class="btn btn-primary" onclick="startSimulation()">
+            <i class="bi bi-play"></i> Start Simulation
+          </button>
+          <button class="btn btn-warning" onclick="pauseSimulation()">
+            <i class="bi bi-pause"></i> Pause
+          </button>
+          <button class="btn btn-danger" onclick="stopSimulation()">
+            <i class="bi bi-stop"></i> Stop
+          </button>
+          <button class="btn btn-success" onclick="addRandomMessage()">
+            <i class="bi bi-plus"></i> Add Random Message
+          </button>
+        </div>
+        <div class="message-simulation">
+          <div class="simulation-log" id="simulationLog">
+            <div class="log-entry">
+              <span class="log-time">[System]</span>
+              <span class="log-status info">Simulation ready. Click "Start Simulation" to begin.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Filters Section -->
+    <div class="filter-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5><i class="bi bi-funnel"></i> Filters</h5>
+        <div>
+          <button class="btn btn-sm btn-outline-primary" onclick="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+            <i class="bi bi-x"></i> Clear Filters
+          </button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-group">
+          <label class="form-label">Date Range</label>
+          <select class="form-select" id="dateFilter">
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="statusFilter">
+            <option value="all">All Status</option>
+            <option value="sent">Sent</option>
+            <option value="pending">Pending</option>
+            <option value="delivered">Delivered</option>
+            <option value="failed">Failed</option>
+            <option value="crispy">CRISPY Offers</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label">Platform</label>
+          <select class="form-select" id="platformFilter">
+            <option value="all">All Platforms</option>
+            <option value="sms">SMS</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label">Search</label>
+          <input type="text" class="form-control" id="searchInput" placeholder="Search by recipient or message...">
+        </div>
+      </div>
+    </div>
+    
+    <!-- Results Table -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title mb-0">
+          <i class="bi bi-table"></i> Message Results
+        </h2>
+        <div>
+          <button class="btn btn-sm btn-outline-primary" onclick="exportTable()">
+            <i class="bi bi-download"></i> Export CSV
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>
+                  <input type="checkbox" id="selectAllMessages" onchange="toggleSelectAllMessages()">
+                </th>
+                <th>Message ID</th>
+                <th>Recipient</th>
+                <th>Message</th>
+                <th>Platform</th>
+                <th>Status</th>
+                <th>Sent At</th>
+                <th>Delivered At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="messageTableBody">
+              <!-- Messages will be populated here -->
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Bulk Message Actions -->
+        <div class="bulk-actions" id="bulkMessageActions" style="display: none;">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span id="selectedMessagesCount">0</span> messages selected
+            </div>
+            <div>
+              <button class="btn btn-sm btn-primary" onclick="bulkResendMessages()">
+                <i class="bi bi-send"></i> Resend
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="bulkDeleteMessages()">
+                <i class="bi bi-trash"></i> Delete
+              </button>
+              <button class="btn btn-sm btn-secondary" onclick="clearMessageSelection()">
+                <i class="bi bi-x"></i> Clear Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Message Detail Modal -->
+    <div class="modal fade" id="messageModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Message Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="messageDetails">
+              <!-- Message details will be populated here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Customer Edit Modal -->
+    <div class="modal fade" id="customerModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Customer</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="editCustomerForm">
+              <input type="hidden" id="editCustomerId">
+              <div class="mb-3">
+                <label for="editCustomerName" class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="editCustomerName" required>
+              </div>
+              <div class="mb-3">
+                <label for="editCustomerPhone" class="form-label">Phone Number</label>
+                <input type="tel" class="form-control" id="editCustomerPhone" required>
+              </div>
+              <div class="mb-3">
+                <label for="editCustomerEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="editCustomerEmail">
+              </div>
+              <div class="mb-3">
+                <label for="editCustomerCity" class="form-label">City</label>
+                <input type="text" class="form-control" id="editCustomerCity">
+              </div>
+              <div class="mb-3">
+                <label for="editCustomerStatus" class="form-label">Status</label>
+                <select class="form-select" id="editCustomerStatus">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveEditedCustomer()">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Upload Data Modal -->
+    <div class="modal fade" id="uploadModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Upload Customer Data</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="file-upload-area" id="fileUploadArea">
+              <div class="file-upload-icon">
+                <i class="bi bi-cloud-upload"></i>
+              </div>
+              <div class="file-upload-text">Drag & drop your file here or click to browse</div>
+              <div class="file-upload-hint">Supported formats: CSV, Excel (.xlsx, .xls)</div>
+              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+              <h6>File Information</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <strong>File Name:</strong> <span id="fileName"></span>
+                </div>
+                <div class="col-md-6">
+                  <strong>File Size:</strong> <span id="fileSize"></span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="upload-progress" id="uploadProgress">
+              <h6>Upload Progress</h6>
+              <div class="progress">
+                <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+              </div>
+              <div class="text-center mt-2">
+                <span id="progressText">Processing...</span>
+              </div>
+            </div>
+            
+            <div class="upload-results" id="uploadResults">
+              <h6>Upload Results</h6>
+              <div class="result-item">
+                <span>Total Records:</span>
+                <span id="totalRecords">0</span>
+              </div>
+              <div class="result-item">
+                <span>Successfully Added:</span>
+                <span id="successCount" class="result-status success">0</span>
+              </div>
+              <div class="result-item">
+                <span>Duplicates Skipped:</span>
+                <span id="duplicateCount" class="result-status warning">0</span>
+              </div>
+              <div class="result-item">
+                <span>Errors:</span>
+                <span id="errorCount" class="result-status error">0</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="uploadBtn" onclick="processFile()" disabled>Upload</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Notifications Modal -->
+    <div class="modal fade" id="notificationsModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Notifications</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="notificationsList">
+              <!-- Notifications will be populated here -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" onclick="clearAllNotifications()">
+              Clear All
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Settings</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="defaultWhatsappNumber" class="form-label">Default WhatsApp Number</label>
+              <input type="text" class="form-control" id="defaultWhatsappNumber" value="0501882206">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Notification Preferences</label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="soundNotifications" checked>
+                <label class="form-check-label" for="soundNotifications">
+                  Enable sound notifications
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="desktopNotifications" checked>
+                <label class="form-check-label" for="desktopNotifications">
+                  Enable desktop notifications
+                </label>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Appearance</label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="darkModeSetting">
+                <label class="form-check-label" for="darkModeSetting">
+                  Dark Mode
+                </label>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="refreshInterval" class="form-label">Data Refresh Interval (seconds)</label>
+              <select class="form-select" id="refreshInterval">
+                <option value="5">5 seconds</option>
+                <option value="10" selected>10 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Global variables
+    let messages = [];
+    let filteredMessages = [];
+    let deliveryChart = null;
+    let statusChart = null;
+    let whatsappOffers = [];
+    let crispyOffers = [];
+    let customers = [];
+    let selectedFile = null;
+    let notifications = [];
+    let simulationInterval = null;
+    let scheduledOffers = [];
+    let selectedCustomers = new Set();
+    let selectedMessages = new Set();
+    let refreshIntervalId = null;
+    
+    // Offer templates
+    const offerTemplates = {
+      crispy: `🔥 CRISPY CHICKEN - ULTIMATE OFFER 🔥
+🍗 12 Crispy Chicken Pieces + 3 Garlic Sauce
+Only 30 AED
+⏰ Valid: Monday & Tuesday Only
+🎁 Special Bonus!
+Get a FREE drink with every order above 50 AED!
+📞 To Order Directly: 600527488
+Order Now!
+⏳ Limited Time!
+Order within 2 hours only!
+👉 Share with friends & get extra discount!
+#CrispyChicken #SpecialOffer #CrispyChickenDeal`,
+      
+      special: `🎉 SPECIAL DISCOUNT FROM CRISPY CHICKEN 🎉
+Get 25% OFF on your next order!
+Use code: CRISPY25
+Valid for all menu items
+📞 Call now: 600527488
+Offer valid until the end of the month!
+Don't miss out on this amazing deal!
+#CrispyChicken #SpecialDiscount #CrispyDeals`,
+      
+      new: `🆕 NEW PRODUCT ALERT FROM CRISPY CHICKEN 🆕
+Introducing our Spicy Crispy Burger!
+🌶️ Extra spicy, extra crispy!
+🧀 Double cheese patty
+🍔 Fresh vegetables
+Special launch price: 35 AED only!
+📞 Order now: 600527488
+Limited time offer!
+#CrispyChicken #NewProduct #SpicyBurger`,
+      
+      custom: `Customize your own offer message here.
+Make sure to include "CRISPY CHICKEN" in your message.`
+    };
+    
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function() {
+      loadSettings();
+      loadCustomersFromStorage();
+      loadMessagesFromStorage();
+      loadScheduledOffersFromStorage();
+      generateSampleData();
+      generateSampleCustomers();
+      setupEventListeners();
+      updateStatistics();
+      updateCharts();
+      updateTable();
+      updateWhatsappStats();
+      updateCrispyStats();
+      updateCustomerCount();
+      updateCustomerList();
+      updateOfferPreview();
+      updateRecentActivity();
+      updateTodayStats();
+      setupAutoRefresh();
+      checkScheduledOffers();
+      
+      // Add sample notifications
+      addNotification('info', 'System started successfully');
+      addNotification('success', '3 messages delivered successfully');
+      addNotification('warning', '1 message failed to deliver');
+      
+      // Update notification badge
+      updateNotificationBadge();
+    });
+    
+    function generateSampleData() {
+      // Only generate sample data if no messages exist
+      if (messages.length === 0) {
+        const sampleMessages = [
+          {
+            id: 'MSG001',
+            recipient: 'John Smith',
+            phone: '+971501234567',
+            message: 'Your order has been delivered successfully',
+            platform: 'SMS',
+            status: 'delivered',
+            sentAt: new Date(Date.now() - 1000 * 60 * 5),
+            deliveredAt: new Date(Date.now() - 1000 * 60 * 3),
+            retryCount: 0
+          },
+          {
+            id: 'MSG002',
+            recipient: 'Alice Johnson',
+            phone: '+971551234568',
+            message: 'Reminder: Your appointment is tomorrow at 2 PM',
+            platform: 'WhatsApp',
+            status: 'sent',
+            sentAt: new Date(Date.now() - 1000 * 60 * 10),
+            deliveredAt: null,
+            retryCount: 0
+          },
+          {
+            id: 'MSG003',
+            recipient: 'Bob Wilson',
+            phone: '+971561234569',
+            message: 'Payment received. Thank you for your purchase',
+            platform: 'SMS',
+            status: 'pending',
+            sentAt: new Date(Date.now() - 1000 * 60 * 15),
+            deliveredAt: null,
+            retryCount: 0
+          },
+          {
+            id: 'MSG004',
+            recipient: 'Emma Davis',
+            phone: '+971581234570',
+            message: 'Your support ticket has been resolved',
+            platform: 'Email',
+            status: 'failed',
+            sentAt: new Date(Date.now() - 1000 * 60 * 20),
+            deliveredAt: null,
+            retryCount: 2
+          },
+          {
+            id: 'MSG005',
+            recipient: 'Michael Brown',
+            phone: '+971501234571',
+            message: 'Welcome to our service! Here\'s your discount code',
+            platform: 'WhatsApp',
+            status: 'delivered',
+            sentAt: new Date(Date.now() - 1000 * 60 * 25),
+            deliveredAt: new Date(Date.now() - 1000 * 60 * 23),
+            retryCount: 0
+          },
+          {
+            id: 'MSG006',
+            recipient: 'Sarah Johnson',
+            phone: '+971551234572',
+            message: 'Your order is out for delivery',
+            platform: 'SMS',
+            status: 'sent',
+            sentAt: new Date(Date.now() - 1000 * 60 * 30),
+            deliveredAt: null,
+            retryCount: 0
+          },
+          {
+            id: 'MSG007',
+            recipient: 'David Wilson',
+            phone: '+971561234573',
+            message: 'Payment failed. Please update your payment method',
+            platform: 'SMS',
+            status: 'failed',
+            sentAt: new Date(Date.now() - 1000 * 60 * 35),
+            deliveredAt: null,
+            retryCount: 1
+          },
+          {
+            id: 'MSG008',
+            recipient: 'Lisa Davis',
+            phone: '+971581234574',
+            message: 'Your feedback is important to us',
+            platform: 'Email',
+            status: 'pending',
+            sentAt: new Date(Date.now() - 1000 * 60 * 40),
+            deliveredAt: null,
+            retryCount: 0
+          }
+        ];
+        
+        messages = sampleMessages;
+        saveMessagesToStorage();
+      }
+      
+      filteredMessages = [...messages];
+    }
+    
+    function generateSampleCustomers() {
+      // Only generate sample customers if none exist
+      if (customers.length === 0) {
+        const sampleCustomers = [
+          {
+            id: 1,
+            name: 'John Smith',
+            phone: '+971501234567',
+            email: 'john.smith@example.com',
+            city: 'Dubai',
+            status: 'active',
+            createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
+          },
+          {
+            id: 2,
+            name: 'Alice Johnson',
+            phone: '+971551234568',
+            email: 'alice.johnson@example.com',
+            city: 'Abu Dhabi',
+            status: 'active',
+            createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+          },
+          {
+            id: 3,
+            name: 'Bob Wilson',
+            phone: '+971561234569',
+            email: 'bob.wilson@example.com',
+            city: 'Sharjah',
+            status: 'active',
+            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+          },
+          {
+            id: 4,
+            name: 'Emma Davis',
+            phone: '+971581234570',
+            email: 'emma.davis@example.com',
+            city: 'Dubai',
+            status: 'inactive',
+            createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+          },
+          {
+            id: 5,
+            name: 'Michael Brown',
+            phone: '+971501234571',
+            email: 'michael.brown@example.com',
+            city: 'Ajman',
+            status: 'active',
+            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+          }
+        ];
+        
+        customers = sampleCustomers;
+        saveCustomersToStorage();
+      }
+    }
+    
+    function setupEventListeners() {
+      // Filters
+      document.getElementById('dateFilter').addEventListener('change', applyFilters);
+      document.getElementById('statusFilter').addEventListener('change', applyFilters);
+      document.getElementById('platformFilter').addEventListener('change', applyFilters);
+      document.getElementById('searchInput').addEventListener('input', applyFilters);
+      
+      // WhatsApp Offer Form
+      document.getElementById('whatsappOfferForm').addEventListener('submit', sendWhatsappOffer);
+      
+      // Offer message textarea
+      document.getElementById('offerMessage').addEventListener('input', updateOfferPreview);
+      
+      // Add Customer Form
+      document.getElementById('addCustomerForm').addEventListener('submit', addCustomer);
+      
+      // Customer search
+      document.getElementById('customerSearchInput').addEventListener('input', filterCustomers);
+      
+      // Customer filter buttons
+      document.querySelectorAll('.customer-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.customer-filter-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          filterCustomers();
+        });
+      });
+      
+      // File Upload
+      const fileUploadArea = document.getElementById('fileUploadArea');
+      const fileInput = document.getElementById('fileInput');
+      
+      fileUploadArea.addEventListener('click', () => fileInput.click());
+      fileUploadArea.addEventListener('dragover', handleDragOver);
+      fileUploadArea.addEventListener('dragleave', handleDragLeave);
+      fileUploadArea.addEventListener('drop', handleDrop);
+      fileInput.addEventListener('change', handleFileSelect);
+      
+      // Schedule offer checkbox
+      document.getElementById('scheduleOffer').addEventListener('change', function() {
+        const scheduledOffersDiv = document.getElementById('scheduledOffers');
+        if (this.checked) {
+          scheduledOffersDiv.style.display = 'block';
+          updateScheduledOffersList();
+        } else {
+          scheduledOffersDiv.style.display = 'none';
+        }
+      });
+    }
+    
+    function updateStatistics() {
+      const sent = messages.filter(m => m.status === 'sent').length;
+      const pending = messages.filter(m => m.status === 'pending').length;
+      const delivered = messages.filter(m => m.status === 'delivered').length;
+      const failed = messages.filter(m => m.status === 'failed').length;
+      const crispy = messages.filter(m => m.status === 'crispy').length;
+      const activeCustomers = customers.filter(c => c.status === 'active').length;
+      
+      document.getElementById('totalSent').textContent = sent;
+      document.getElementById('totalPending').textContent = pending;
+      document.getElementById('totalDelivered').textContent = delivered;
+      document.getElementById('totalFailed').textContent = failed;
+      document.getElementById('totalCrispy').textContent = crispy;
+      document.getElementById('totalCustomers').textContent = activeCustomers;
+    }
+    
+    function updateTodayStats() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const todayMessages = messages.filter(m => {
+        const sentDate = new Date(m.sentAt);
+        return sentDate >= today && sentDate < tomorrow;
+      });
+      
+      const todaySent = todayMessages.filter(m => m.status === 'sent' || m.status === 'delivered' || m.status === 'failed').length;
+      const todayDelivered = todayMessages.filter(m => m.status === 'delivered').length;
+      const todayFailed = todayMessages.filter(m => m.status === 'failed').length;
+      const todayOffers = todayMessages.filter(m => m.status === 'crispy').length;
+      
+      document.getElementById('todaySent').textContent = todaySent;
+      document.getElementById('todayDelivered').textContent = todayDelivered;
+      document.getElementById('todayFailed').textContent = todayFailed;
+      document.getElementById('todayOffers').textContent = todayOffers;
+    }
+    
+    function updateWhatsappStats() {
+      const sent = whatsappOffers.filter(o => o.status === 'sent').length;
+      const delivered = whatsappOffers.filter(o => o.status === 'delivered').length;
+      const failed = whatsappOffers.filter(o => o.status === 'failed').length;
+      
+      document.getElementById('totalSentOffers').textContent = sent;
+      document.getElementById('totalDeliveredOffers').textContent = delivered;
+      document.getElementById('totalFailedOffers').textContent = failed;
+    }
+    
+    function updateCrispyStats() {
+      const sent = crispyOffers.filter(o => o.status === 'sent').length;
+      const delivered = crispyOffers.filter(o => o.status === 'delivered').length;
+      const failed = crispyOffers.filter(o => o.status === 'failed').length;
+      
+      // Update crispy stats in the main dashboard
+      const totalCrispy = sent + delivered + failed;
+      document.getElementById('totalCrispy').textContent = totalCrispy;
+    }
+    
+    function updateCustomerCount() {
+      const activeCustomers = customers.filter(c => c.status === 'active').length;
+      document.getElementById('customerCount').value = activeCustomers;
+    }
+    
+    function updateOfferPreview() {
+      const message = document.getElementById('offerMessage').value;
+      document.getElementById('offerPreview').textContent = message;
+    }
+    
+    function updateCharts() {
+      // Delivery Chart
+      const deliveryCtx = document.getElementById('deliveryChart').getContext('2d');
+      
+      if (deliveryChart) {
+        deliveryChart.destroy();
+      }
+      
+      const hourlyData = getHourlyDeliveryData();
+      
+      deliveryChart = new Chart(deliveryCtx, {
+        type: 'line',
+        data: {
+          labels: hourlyData.labels,
+          datasets: [{
+            label: 'Messages Sent',
+            data: hourlyData.sent,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            tension: 0.4
+          }, {
+            label: 'Messages Delivered',
+            data: hourlyData.delivered,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+      
+      // Status Chart
+      const statusCtx = document.getElementById('statusChart').getContext('2d');
+      
+      if (statusChart) {
+        statusChart.destroy();
+      }
+      
+      const statusCounts = {
+        sent: messages.filter(m => m.status === 'sent').length,
+        pending: messages.filter(m => m.status === 'pending').length,
+        delivered: messages.filter(m => m.status === 'delivered').length,
+        failed: messages.filter(m => m.status === 'failed').length,
+        crispy: messages.filter(m => m.status === 'crispy').length
+      };
+      
+      statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Sent', 'Pending', 'Delivered', 'Failed', 'CRISPY Offers'],
+          datasets: [{
+            data: [statusCounts.sent, statusCounts.pending, statusCounts.delivered, statusCounts.failed, statusCounts.crispy],
+            backgroundColor: ['#2563eb', '#f59e0b', '#10b981', '#ef4444', '#ff6b6b']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+    
+    function getHourlyDeliveryData() {
+      const hours = [];
+      const sent = [];
+      const delivered = [];
+      
+      for (let i = 0; i < 24; i++) {
+        hours.push(`${i}:00`);
+        const hourMessages = messages.filter(m => {
+          const messageHour = new Date(m.sentAt || m.deliveredAt).getHours();
+          return messageHour === i;
+        });
+        
+        sent.push(hourMessages.filter(m => m.status === 'sent' || m.status === 'delivered' || m.status === 'failed' || m.status === 'crispy').length);
+        delivered.push(hourMessages.filter(m => m.status === 'delivered').length);
+      }
+      
+      return { labels: hours, sent, delivered };
+    }
+    
+    function applyFilters() {
+      const dateFilter = document.getElementById('dateFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      const platformFilter = document.getElementById('platformFilter').value;
+      const searchInput = document.getElementById('searchInput').value.toLowerCase();
+      
+      filteredMessages = messages.filter(message => {
+        // Date filter
+        let passesDateFilter = true;
+        if (dateFilter !== 'all') {
+          const messageDate = new Date(message.sentAt);
+          const now = new Date();
+          
+          if (dateFilter === 'today') {
+            passesDateFilter = messageDate.toDateString() === now.toDateString();
+          } else if (dateFilter === 'week') {
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            passesDateFilter = messageDate >= weekAgo;
+          } else if (dateFilter === 'month') {
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            passesDateFilter = messageDate >= monthAgo;
+          }
+        }
+        
+        // Status filter
+        const passesStatusFilter = statusFilter === 'all' || message.status === statusFilter;
+        
+        // Platform filter
+        const passesPlatformFilter = platformFilter === 'all' || message.platform === platformFilter;
+        
+        // Search filter
+        const passesSearchFilter = searchInput === '' || 
+          message.recipient.toLowerCase().includes(searchInput) || 
+          message.message.toLowerCase().includes(searchInput) ||
+          message.id.toLowerCase().includes(searchInput);
+        
+        return passesDateFilter && passesStatusFilter && passesPlatformFilter && passesSearchFilter;
+      });
+      
+      updateTable();
+      updateStatistics();
+      updateCharts();
+    }
+    
+    function updateTable() {
+      const tableBody = document.getElementById('messageTableBody');
+      tableBody.innerHTML = '';
+      
+      if (filteredMessages.length === 0) {
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = `
+          <td colspan="9" class="text-center py-4">
+            <div class="text-muted">No messages found matching your criteria</div>
+          </td>
+        `;
+        tableBody.appendChild(emptyRow);
+        return;
+      }
+      
+      filteredMessages.forEach(message => {
+        const row = document.createElement('tr');
+        
+        // Format dates
+        const sentAt = message.sentAt ? new Date(message.sentAt).toLocaleString() : 'N/A';
+        const deliveredAt = message.deliveredAt ? new Date(message.deliveredAt).toLocaleString() : 'N/A';
+        
+        // Create status badge
+        let statusBadge = '';
+        switch (message.status) {
+          case 'sent':
+            statusBadge = '<span class="status-badge sent"><i class="bi bi-send"></i> Sent</span>';
+            break;
+          case 'pending':
+            statusBadge = '<span class="status-badge pending"><i class="bi bi-clock"></i> Pending</span>';
+            break;
+          case 'delivered':
+            statusBadge = '<span class="status-badge delivered"><i class="bi bi-check-circle"></i> Delivered</span>';
+            break;
+          case 'failed':
+            statusBadge = '<span class="status-badge failed"><i class="bi bi-exclamation-circle"></i> Failed</span>';
+            break;
+          case 'crispy':
+            statusBadge = '<span class="status-badge crispy"><i class="bi bi-fire"></i> CRISPY Offer</span>';
+            break;
+        }
+        
+        // Create platform icon
+        let platformIcon = '';
+        switch (message.platform) {
+          case 'SMS':
+            platformIcon = '<i class="bi bi-chat-text"></i> SMS';
+            break;
+          case 'WhatsApp':
+            platformIcon = '<i class="bi bi-whatsapp"></i> WhatsApp';
+            break;
+          case 'Email':
+            platformIcon = '<i class="bi bi-envelope"></i> Email';
+            break;
+        }
+        
+        row.innerHTML = `
+          <td>
+            <input type="checkbox" class="message-checkbox" data-id="${message.id}" onchange="toggleMessageSelection('${message.id}')">
+          </td>
+          <td>${message.id}</td>
+          <td>${message.recipient}</td>
+          <td>
+            <div class="message-preview">
+              <div class="message-preview-body">${message.message.substring(0, 100)}${message.message.length > 100 ? '...' : ''}</div>
+            </div>
+          </td>
+          <td>${platformIcon}</td>
+          <td>${statusBadge}</td>
+          <td>${sentAt}</td>
+          <td>${deliveredAt}</td>
+          <td>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary btn-icon" onclick="viewMessageDetails('${message.id}')" title="View Details">
+                <i class="bi bi-eye"></i>
+              </button>
+              ${message.status === 'failed' ? `
+                <button class="btn btn-sm btn-outline-warning btn-icon" onclick="retryMessage('${message.id}')" title="Retry">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+      
+      // Update select all checkbox
+      updateSelectAllCheckbox();
+    }
+    
+    function viewMessageDetails(messageId) {
+      const message = messages.find(m => m.id === messageId);
+      if (!message) return;
+      
+      const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+      const detailsContainer = document.getElementById('messageDetails');
+      
+      // Format dates
+      const sentAt = message.sentAt ? new Date(message.sentAt).toLocaleString() : 'N/A';
+      const deliveredAt = message.deliveredAt ? new Date(message.deliveredAt).toLocaleString() : 'N/A';
+      
+      // Create status badge
+      let statusBadge = '';
+      switch (message.status) {
+        case 'sent':
+          statusBadge = '<span class="status-badge sent"><i class="bi bi-send"></i> Sent</span>';
+          break;
+        case 'pending':
+          statusBadge = '<span class="status-badge pending"><i class="bi bi-clock"></i> Pending</span>';
+          break;
+        case 'delivered':
+          statusBadge = '<span class="status-badge delivered"><i class="bi bi-check-circle"></i> Delivered</span>';
+          break;
+        case 'failed':
+          statusBadge = '<span class="status-badge failed"><i class="bi bi-exclamation-circle"></i> Failed</span>';
+          break;
+        case 'crispy':
+          statusBadge = '<span class="status-badge crispy"><i class="bi bi-fire"></i> CRISPY Offer</span>';
+          break;
+      }
+      
+      // Create timeline
+      let timelineHtml = `
+        <div class="timeline">
+          <div class="timeline-item sent">
+            <div class="timeline-content">
+              <div class="timeline-time">${sentAt}</div>
+              <div class="timeline-message">Message sent</div>
+            </div>
+          </div>
+      `;
+      
+      if (message.deliveredAt) {
+        timelineHtml += `
+          <div class="timeline-item delivered">
+            <div class="timeline-content">
+              <div class="timeline-time">${deliveredAt}</div>
+              <div class="timeline-message">Message delivered</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (message.status === 'failed') {
+        timelineHtml += `
+          <div class="timeline-item failed">
+            <div class="timeline-content">
+              <div class="timeline-time">${sentAt}</div>
+              <div class="timeline-message">Delivery failed</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (message.status === 'crispy') {
+        timelineHtml += `
+          <div class="timeline-item crispy">
+            <div class="timeline-content">
+              <div class="timeline-time">${sentAt}</div>
+              <div class="timeline-message">CRISPY CHICKEN offer sent</div>
+            </div>
+          </div>
+        `;
+        
+        if (message.deliveredAt) {
+          timelineHtml += `
+            <div class="timeline-item delivered">
+              <div class="timeline-content">
+                <div class="timeline-time">${deliveredAt}</div>
+                <div class="timeline-message">Offer delivered</div>
+              </div>
+            </div>
+          `;
+        }
+      }
+      
+      timelineHtml += '</div>';
+      
+      detailsContainer.innerHTML = `
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <h6>Message Information</h6>
+            <table class="table table-sm">
+              <tr>
+                <td><strong>Message ID:</strong></td>
+                <td>${message.id}</td>
+              </tr>
+              <tr>
+                <td><strong>Recipient:</strong></td>
+                <td>${message.recipient}</td>
+              </tr>
+              <tr>
+                <td><strong>Phone/Email:</strong></td>
+                <td>${message.phone || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td><strong>Platform:</strong></td>
+                <td>${message.platform}</td>
+              </tr>
+              <tr>
+                <td><strong>Status:</strong></td>
+                <td>${statusBadge}</td>
+              </tr>
+              <tr>
+                <td><strong>Retry Count:</strong></td>
+                <td>${message.retryCount || 0}</td>
+              </tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h6>Timestamps</h6>
+            <table class="table table-sm">
+              <tr>
+                <td><strong>Sent At:</strong></td>
+                <td>${sentAt}</td>
+              </tr>
+              <tr>
+                <td><strong>Delivered At:</strong></td>
+                <td>${deliveredAt}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="mb-4">
+          <h6>Message Content</h6>
+          <div class="message-preview">
+            <div class="message-preview-body" style="white-space: pre-wrap;">${message.message}</div>
+          </div>
+        </div>
+        <div>
+          <h6>Delivery Timeline</h6>
+          ${timelineHtml}
+        </div>
+      `;
+      
+      modal.show();
+    }
+    
+    function retryMessage(messageId) {
+      const messageIndex = messages.findIndex(m => m.id === messageId);
+      if (messageIndex === -1) return;
+      
+      // Update message status and retry count
+      messages[messageIndex].status = 'pending';
+      messages[messageIndex].retryCount = (messages[messageIndex].retryCount || 0) + 1;
+      messages[messageIndex].sentAt = new Date();
+      
+      // Show success toast
+      showToast('Message retry initiated', 'success');
+      
+      // Apply filters to update the view
+      applyFilters();
+      
+      // Simulate delivery after a delay
+      setTimeout(() => {
+        const success = Math.random() > 0.3; // 70% success rate for retries
+        
+        if (success) {
+          messages[messageIndex].status = 'delivered';
+          messages[messageIndex].deliveredAt = new Date();
+          showToast('Message delivered successfully', 'success');
+          addNotification('success', `Message ${messageId} delivered successfully`);
+        } else {
+          messages[messageIndex].status = 'failed';
+          showToast('Message delivery failed again', 'error');
+          addNotification('error', `Message ${messageId} failed to deliver`);
+        }
+        
+        applyFilters();
+        updateRecentActivity();
+      }, 3000);
+    }
+    
+    function refreshData() {
+      showToast('Refreshing data...', 'info');
+      
+      // Simulate data refresh
+      setTimeout(() => {
+        // Add some new messages
+        const newMessage = {
+          id: 'MSG' + String(messages.length + 1).padStart(3, '0'),
+          recipient: 'New User',
+          phone: '+9715012345' + String(Math.floor(Math.random() * 1000)).padStart(3, '0'),
+          message: 'This is a new message',
+          platform: ['SMS', 'WhatsApp', 'Email'][Math.floor(Math.random() * 3)],
+          status: ['sent', 'pending', 'delivered', 'failed'][Math.floor(Math.random() * 4)],
+          sentAt: new Date(),
+          deliveredAt: Math.random() > 0.5 ? new Date(Date.now() - 1000 * 60 * Math.floor(Math.random() * 10)) : null,
+          retryCount: 0
+        };
+        
+        messages.unshift(newMessage);
+        saveMessagesToStorage();
+        applyFilters();
+        updateCustomerCount();
+        updateTodayStats();
+        updateRecentActivity();
+        showToast('Data refreshed successfully', 'success');
+        addNotification('info', 'Data refreshed successfully');
+      }, 1000);
+    }
+    
+    function clearFilters() {
+      document.getElementById('dateFilter').value = 'today';
+      document.getElementById('statusFilter').value = 'all';
+      document.getElementById('platformFilter').value = 'all';
+      document.getElementById('searchInput').value = '';
+      
+      applyFilters();
+      showToast('Filters cleared', 'info');
+    }
+    
+    function exportReport() {
+      showToast('Generating report...', 'info');
+      
+      // Simulate report generation
+      setTimeout(() => {
+        // Create a CSV string
+        let csv = 'Message ID,Recipient,Platform,Status,Sent At,Delivered At\n';
+        
+        filteredMessages.forEach(message => {
+          const sentAt = message.sentAt ? new Date(message.sentAt).toLocaleString() : 'N/A';
+          const deliveredAt = message.deliveredAt ? new Date(message.deliveredAt).toLocaleString() : 'N/A';
+          
+          csv += `${message.id},${message.recipient},${message.platform},${message.status},${sentAt},${deliveredAt}\n`;
+        });
+        
+        // Create a download link
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', 'message_report.csv');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        showToast('Report exported successfully', 'success');
+        addNotification('success', 'Report exported successfully');
+      }, 1000);
+    }
+    
+    function exportTable() {
+      exportReport(); // Same functionality as exportReport
+    }
+    
+    function showSettings() {
+      const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
+      modal.show();
+    }
+    
+    function saveSettings() {
+      const settings = {
+        defaultWhatsappNumber: document.getElementById('defaultWhatsappNumber').value,
+        soundNotifications: document.getElementById('soundNotifications').checked,
+        desktopNotifications: document.getElementById('desktopNotifications').checked,
+        darkMode: document.getElementById('darkModeSetting').checked,
+        refreshInterval: parseInt(document.getElementById('refreshInterval').value)
+      };
+      
+      localStorage.setItem('crispySettings', JSON.stringify(settings));
+      
+      // Apply dark mode if enabled
+      if (settings.darkMode) {
+        document.body.classList.add('dark-mode');
+        document.getElementById('darkModeIcon').classList.replace('bi-moon-stars', 'bi-sun');
+      } else {
+        document.body.classList.remove('dark-mode');
+        document.getElementById('darkModeIcon').classList.replace('bi-sun', 'bi-moon-stars');
+      }
+      
+      // Update WhatsApp number
+      document.getElementById('whatsappNumber').value = settings.defaultWhatsappNumber;
+      
+      // Setup auto refresh with new interval
+      setupAutoRefresh();
+      
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
+      modal.hide();
+      
+      showToast('Settings saved successfully', 'success');
+      addNotification('success', 'Settings saved successfully');
+    }
+    
+    function loadSettings() {
+      const settings = JSON.parse(localStorage.getItem('crispySettings')) || {};
+      
+      // Apply settings
+      document.getElementById('defaultWhatsappNumber').value = settings.defaultWhatsappNumber || '0501882206';
+      document.getElementById('soundNotifications').checked = settings.soundNotifications !== false;
+      document.getElementById('desktopNotifications').checked = settings.desktopNotifications !== false;
+      document.getElementById('darkModeSetting').checked = settings.darkMode || false;
+      document.getElementById('refreshInterval').value = settings.refreshInterval || 10;
+      
+      // Apply dark mode if enabled
+      if (settings.darkMode) {
+        document.body.classList.add('dark-mode');
+        document.getElementById('darkModeIcon').classList.replace('bi-moon-stars', 'bi-sun');
+      }
+      
+      // Update WhatsApp number
+      document.getElementById('whatsappNumber').value = settings.defaultWhatsappNumber || '0501882206';
+    }
+    
+    function toggleDarkMode() {
+      const isDarkMode = document.body.classList.toggle('dark-mode');
+      const icon = document.getElementById('darkModeIcon');
+      
+      if (isDarkMode) {
+        icon.classList.replace('bi-moon-stars', 'bi-sun');
+      } else {
+        icon.classList.replace('bi-sun', 'bi-moon-stars');
+      }
+      
+      // Update settings
+      const settings = JSON.parse(localStorage.getItem('crispySettings')) || {};
+      settings.darkMode = isDarkMode;
+      localStorage.setItem('crispySettings', JSON.stringify(settings));
+      
+      showToast(`Dark mode ${isDarkMode ? 'enabled' : 'disabled'}`, 'info');
+    }
+    
+    function showToast(message, type = 'info') {
+      const toastContainer = document.getElementById('toastContainer');
+      
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      let icon = '';
+      switch (type) {
+        case 'success':
+          icon = '<i class="bi bi-check-circle-fill"></i>';
+          break;
+        case 'error':
+          icon = '<i class="bi bi-exclamation-circle-fill"></i>';
+          break;
+        case 'warning':
+          icon = '<i class="bi bi-exclamation-triangle-fill"></i>';
+          break;
+        case 'whatsapp':
+          icon = '<i class="bi bi-whatsapp"></i>';
+          break;
+        case 'crispy':
+          icon = '<i class="bi bi-fire"></i>';
+          break;
+        case 'info':
+        default:
+          icon = '<i class="bi bi-info-circle-fill"></i>';
+          break;
+      }
+      
+      toast.innerHTML = `
+        ${icon}
+        <div>${message}</div>
+      `;
+      
+      toastContainer.appendChild(toast);
+      
+      // Auto remove after 3 seconds
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        
+        setTimeout(() => {
+          toastContainer.removeChild(toast);
+        }, 300);
+      }, 3000);
+    }
+    
+    // WhatsApp Offer System Functions
+    function sendWhatsappOffer(e) {
+      e.preventDefault();
+      
+      const whatsappNumber = document.getElementById('whatsappNumber').value;
+      const offerMessage = document.getElementById('offerMessage').value;
+      const scheduleOffer = document.getElementById('scheduleOffer').checked;
+      
+      // Ensure the message contains "CRISPY CHICKEN"
+      if (!offerMessage.includes('CRISPY CHICKEN')) {
+        showToast('The offer message must include "CRISPY CHICKEN"', 'warning');
+        return;
+      }
+      
+      const activeCustomers = customers.filter(c => c.status === 'active');
+      
+      if (activeCustomers.length === 0) {
+        showToast('No active customers found', 'warning');
+        return;
+      }
+      
+      if (scheduleOffer) {
+        const scheduleDate = document.getElementById('scheduleDate').value;
+        const scheduleTime = document.getElementById('scheduleTime').value;
+        
+        if (!scheduleDate || !scheduleTime) {
+          showToast('Please select both date and time for scheduling', 'warning');
+          return;
+        }
+        
+        const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+        
+        if (scheduledDateTime <= new Date()) {
+          showToast('Scheduled time must be in the future', 'warning');
+          return;
+        }
+        
+        // Create scheduled offer
+        const scheduledOffer = {
+          id: 'SCH' + String(scheduledOffers.length + 1).padStart(3, '0'),
+          message: offerMessage,
+          scheduledAt: scheduledDateTime,
+          whatsappNumber: whatsappNumber,
+          status: 'scheduled'
+        };
+        
+        scheduledOffers.push(scheduledOffer);
+        saveScheduledOffersToStorage();
+        
+        showToast(`Offer scheduled for ${scheduledDateTime.toLocaleString()}`, 'success');
+        addNotification('success', `Offer scheduled for ${scheduledDateTime.toLocaleString()}`);
+        
+        // Update scheduled offers list
+        updateScheduledOffersList();
+        
+        return;
+      }
+      
+      // Create new WhatsApp offers for each active customer
+      const newOffers = activeCustomers.map((customer, index) => {
+        return {
+          id: 'CRS' + String(crispyOffers.length + index + 1).padStart(3, '0'),
+          recipient: customer.name,
+          phone: customer.phone,
+          message: offerMessage,
+          platform: 'WhatsApp',
+          status: 'pending',
+          sentAt: new Date(),
+          deliveredAt: null,
+          retryCount: 0,
+          whatsappNumber: whatsappNumber
+        };
+      });
+      
+      // Add the new offers to the crispyOffers array
+      crispyOffers = [...newOffers, ...crispyOffers];
+      
+      // Also add to the messages array for tracking
+      messages = [...newOffers, ...messages];
+      saveMessagesToStorage();
+      
+      // Update the UI
+      updateCustomerCount();
+      updateWhatsappStats();
+      updateCrispyStats();
+      applyFilters();
+      updateTodayStats();
+      updateRecentActivity();
+      
+      showToast(`Sending CRISPY CHICKEN offer to ${activeCustomers.length} customers...`, 'crispy');
+      addNotification('crispy', `Sending CRISPY CHICKEN offer to ${activeCustomers.length} customers`);
+      
+      // Simulate sending process
+      setTimeout(() => {
+        // Update status to 'crispy'
+        newOffers.forEach(offer => {
+          const index = messages.findIndex(m => m.id === offer.id);
+          if (index !== -1) {
+            messages[index].status = 'crispy';
+          }
+          
+          const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+          if (offerIndex !== -1) {
+            crispyOffers[offerIndex].status = 'sent';
+          }
+        });
+        
+        saveMessagesToStorage();
+        updateWhatsappStats();
+        updateCrispyStats();
+        applyFilters();
+        updateTodayStats();
+        updateRecentActivity();
+        showToast('CRISPY CHICKEN offers sent successfully', 'crispy');
+        addNotification('success', 'CRISPY CHICKEN offers sent successfully');
+        
+        // Simulate delivery after a delay
+        setTimeout(() => {
+          newOffers.forEach(offer => {
+            const index = messages.findIndex(m => m.id === offer.id);
+            if (index !== -1) {
+              // 90% success rate for delivery
+              const success = Math.random() > 0.1;
+              if (success) {
+                messages[index].status = 'delivered';
+                messages[index].deliveredAt = new Date();
+                
+                const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+                if (offerIndex !== -1) {
+                  crispyOffers[offerIndex].status = 'delivered';
+                  crispyOffers[offerIndex].deliveredAt = new Date();
+                }
+              } else {
+                messages[index].status = 'failed';
+                
+                const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+                if (offerIndex !== -1) {
+                  crispyOffers[offerIndex].status = 'failed';
+                }
+              }
+            }
+          });
+          
+          saveMessagesToStorage();
+          updateWhatsappStats();
+          updateCrispyStats();
+          applyFilters();
+          updateTodayStats();
+          updateRecentActivity();
+          showToast('CRISPY CHICKEN offer delivery process completed', 'crispy');
+          addNotification('info', 'CRISPY CHICKEN offer delivery process completed');
+        }, 3000);
+      }, 1000);
+    }
+    
+    // Template selection function
+    function selectTemplate(templateName) {
+      // Update active button
+      document.querySelectorAll('.template-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // Update textarea with selected template
+      document.getElementById('offerMessage').value = offerTemplates[templateName];
+      
+      // Update preview
+      updateOfferPreview();
+      
+      // Show notification
+      showToast(`Template "${templateName}" selected`, 'info');
+    }
+    
+    // Customer Management Functions
+    function toggleCustomerForm() {
+      const form = document.getElementById('customerForm');
+      if (form.style.display === 'none') {
+        form.style.display = 'block';
+        document.getElementById('addCustomerForm').reset();
+      } else {
+        form.style.display = 'none';
+      }
+    }
+    
+    function addCustomer(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('customerName').value;
+      const phone = document.getElementById('customerPhone').value;
+      const email = document.getElementById('customerEmail').value;
+      const city = document.getElementById('customerCity').value;
+      const status = document.getElementById('customerStatus').value;
+      
+      // Check if phone number already exists
+      const existingCustomer = customers.find(c => c.phone === phone);
+      if (existingCustomer) {
+        showToast('A customer with this phone number already exists', 'warning');
+        return;
+      }
+      
+      // Create new customer
+      const newCustomer = {
+        id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
+        name,
+        phone,
+        email,
+        city,
+        status,
+        createdAt: new Date()
+      };
+      
+      // Add to customers array
+      customers.push(newCustomer);
+      saveCustomersToStorage();
+      
+      // Update UI
+      updateCustomerList();
+      updateCustomerCount();
+      updateStatistics();
+      
+      // Hide form
+      toggleCustomerForm();
+      
+      // Show success message
+      showToast('Customer added successfully', 'success');
+      addNotification('success', `Customer ${name} added successfully`);
+    }
+    
+    function updateCustomerList() {
+      const customerList = document.getElementById('customerList');
+      customerList.innerHTML = '';
+      
+      if (customers.length === 0) {
+        customerList.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <p>No customers found</p>
+            <button class="btn btn-sm btn-primary" onclick="toggleCustomerForm()">
+              <i class="bi bi-plus"></i> Add Customer
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      customers.forEach(customer => {
+        const customerItem = document.createElement('div');
+        customerItem.className = 'customer-item';
+        if (selectedCustomers.has(customer.id)) {
+          customerItem.classList.add('selected');
+        }
+        
+        customerItem.innerHTML = `
+          <div class="customer-info">
+            <div class="customer-name">${customer.name}</div>
+            <div class="customer-contact">
+              <i class="bi bi-telephone"></i> ${customer.phone}
+              ${customer.email ? `<br><i class="bi bi-envelope"></i> ${customer.email}` : ''}
+              ${customer.city ? `<br><i class="bi bi-geo-alt"></i> ${customer.city}` : ''}
+            </div>
+          </div>
+          <div class="customer-actions">
+            <input type="checkbox" class="customer-checkbox" data-id="${customer.id}" onchange="toggleCustomerSelection(${customer.id})">
+            <span class="customer-status ${customer.status}">${customer.status}</span>
+            <button class="btn btn-sm btn-outline-primary btn-icon" onclick="editCustomer(${customer.id})" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger btn-icon" onclick="deleteCustomer(${customer.id})" title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        `;
+        
+        customerList.appendChild(customerItem);
+      });
+      
+      // Update bulk actions visibility
+      updateBulkCustomerActions();
+    }
+    
+    function filterCustomers() {
+      const searchTerm = document.getElementById('customerSearchInput').value.toLowerCase();
+      const activeFilter = document.querySelector('.customer-filter-btn.active').dataset.filter;
+      
+      let filteredCustomers = [...customers];
+      
+      // Filter by search term
+      if (searchTerm) {
+        filteredCustomers = filteredCustomers.filter(customer => 
+          customer.name.toLowerCase().includes(searchTerm) ||
+          customer.phone.toLowerCase().includes(searchTerm) ||
+          (customer.email && customer.email.toLowerCase().includes(searchTerm)) ||
+          (customer.city && customer.city.toLowerCase().includes(searchTerm))
+        );
+      }
+      
+      // Filter by status or city
+      if (activeFilter !== 'all') {
+        if (activeFilter === 'active' || activeFilter === 'inactive') {
+          filteredCustomers = filteredCustomers.filter(customer => customer.status === activeFilter);
+        } else {
+          // City filter
+          filteredCustomers = filteredCustomers.filter(customer => 
+            customer.city && customer.city.toLowerCase() === activeFilter
+          );
+        }
+      }
+      
+      // Update the customer list
+      const customerList = document.getElementById('customerList');
+      customerList.innerHTML = '';
+      
+      if (filteredCustomers.length === 0) {
+        customerList.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <p>No customers found</p>
+            <button class="btn btn-sm btn-primary" onclick="toggleCustomerForm()">
+              <i class="bi bi-plus"></i> Add Customer
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      filteredCustomers.forEach(customer => {
+        const customerItem = document.createElement('div');
+        customerItem.className = 'customer-item';
+        if (selectedCustomers.has(customer.id)) {
+          customerItem.classList.add('selected');
+        }
+        
+        customerItem.innerHTML = `
+          <div class="customer-info">
+            <div class="customer-name">${customer.name}</div>
+            <div class="customer-contact">
+              <i class="bi bi-telephone"></i> ${customer.phone}
+              ${customer.email ? `<br><i class="bi bi-envelope"></i> ${customer.email}` : ''}
+              ${customer.city ? `<br><i class="bi bi-geo-alt"></i> ${customer.city}` : ''}
+            </div>
+          </div>
+          <div class="customer-actions">
+            <input type="checkbox" class="customer-checkbox" data-id="${customer.id}" onchange="toggleCustomerSelection(${customer.id})">
+            <span class="customer-status ${customer.status}">${customer.status}</span>
+            <button class="btn btn-sm btn-outline-primary btn-icon" onclick="editCustomer(${customer.id})" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger btn-icon" onclick="deleteCustomer(${customer.id})" title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        `;
+        
+        customerList.appendChild(customerItem);
+      });
+      
+      // Update bulk actions visibility
+      updateBulkCustomerActions();
+    }
+    
+    function toggleCustomerSelection(customerId) {
+      if (selectedCustomers.has(customerId)) {
+        selectedCustomers.delete(customerId);
+      } else {
+        selectedCustomers.add(customerId);
+      }
+      
+      // Update UI
+      updateCustomerList();
+    }
+    
+    function updateBulkCustomerActions() {
+      const bulkActions = document.getElementById('bulkCustomerActions');
+      if (selectedCustomers.size > 0) {
+        bulkActions.classList.add('active');
+      } else {
+        bulkActions.classList.remove('active');
+      }
+    }
+    
+    function bulkChangeStatus(status) {
+      if (selectedCustomers.size === 0) return;
+      
+      selectedCustomers.forEach(customerId => {
+        const customer = customers.find(c => c.id === customerId);
+        if (customer) {
+          customer.status = status;
+        }
+      });
+      
+      saveCustomersToStorage();
+      updateCustomerList();
+      updateCustomerCount();
+      updateStatistics();
+      
+      showToast(`${selectedCustomers.size} customers set to ${status}`, 'success');
+      addNotification('success', `${selectedCustomers.size} customers set to ${status}`);
+      
+      // Clear selection
+      selectedCustomers.clear();
+      updateBulkCustomerActions();
+    }
+    
+    function bulkDeleteCustomers() {
+      if (selectedCustomers.size === 0) return;
+      
+      if (!confirm(`Are you sure you want to delete ${selectedCustomers.size} customers?`)) return;
+      
+      customers = customers.filter(customer => !selectedCustomers.has(customer.id));
+      saveCustomersToStorage();
+      
+      updateCustomerList();
+      updateCustomerCount();
+      updateStatistics();
+      
+      showToast(`${selectedCustomers.size} customers deleted`, 'success');
+      addNotification('success', `${selectedCustomers.size} customers deleted`);
+      
+      // Clear selection
+      selectedCustomers.clear();
+      updateBulkCustomerActions();
+    }
+    
+    function bulkSendOffer() {
+      if (selectedCustomers.size === 0) return;
+      
+      const whatsappNumber = document.getElementById('whatsappNumber').value;
+      const offerMessage = document.getElementById('offerMessage').value;
+      
+      // Ensure the message contains "CRISPY CHICKEN"
+      if (!offerMessage.includes('CRISPY CHICKEN')) {
+        showToast('The offer message must include "CRISPY CHICKEN"', 'warning');
+        return;
+      }
+      
+      const selectedCustomersArray = customers.filter(customer => selectedCustomers.has(customer.id));
+      
+      // Create new WhatsApp offers for each selected customer
+      const newOffers = selectedCustomersArray.map((customer, index) => {
+        return {
+          id: 'CRS' + String(crispyOffers.length + index + 1).padStart(3, '0'),
+          recipient: customer.name,
+          phone: customer.phone,
+          message: offerMessage,
+          platform: 'WhatsApp',
+          status: 'pending',
+          sentAt: new Date(),
+          deliveredAt: null,
+          retryCount: 0,
+          whatsappNumber: whatsappNumber
+        };
+      });
+      
+      // Add the new offers to the crispyOffers array
+      crispyOffers = [...newOffers, ...crispyOffers];
+      
+      // Also add to the messages array for tracking
+      messages = [...newOffers, ...messages];
+      saveMessagesToStorage();
+      
+      // Update the UI
+      updateCustomerCount();
+      updateWhatsappStats();
+      updateCrispyStats();
+      applyFilters();
+      updateTodayStats();
+      updateRecentActivity();
+      
+      showToast(`Sending CRISPY CHICKEN offer to ${selectedCustomersArray.length} selected customers...`, 'crispy');
+      addNotification('crispy', `Sending CRISPY CHICKEN offer to ${selectedCustomersArray.length} selected customers`);
+      
+      // Simulate sending process
+      setTimeout(() => {
+        // Update status to 'crispy'
+        newOffers.forEach(offer => {
+          const index = messages.findIndex(m => m.id === offer.id);
+          if (index !== -1) {
+            messages[index].status = 'crispy';
+          }
+          
+          const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+          if (offerIndex !== -1) {
+            crispyOffers[offerIndex].status = 'sent';
+          }
+        });
+        
+        saveMessagesToStorage();
+        updateWhatsappStats();
+        updateCrispyStats();
+        applyFilters();
+        updateTodayStats();
+        updateRecentActivity();
+        showToast('CRISPY CHICKEN offers sent successfully', 'crispy');
+        addNotification('success', 'CRISPY CHICKEN offers sent successfully');
+        
+        // Simulate delivery after a delay
+        setTimeout(() => {
+          newOffers.forEach(offer => {
+            const index = messages.findIndex(m => m.id === offer.id);
+            if (index !== -1) {
+              // 90% success rate for delivery
+              const success = Math.random() > 0.1;
+              if (success) {
+                messages[index].status = 'delivered';
+                messages[index].deliveredAt = new Date();
+                
+                const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+                if (offerIndex !== -1) {
+                  crispyOffers[offerIndex].status = 'delivered';
+                  crispyOffers[offerIndex].deliveredAt = new Date();
+                }
+              } else {
+                messages[index].status = 'failed';
+                
+                const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+                if (offerIndex !== -1) {
+                  crispyOffers[offerIndex].status = 'failed';
+                }
+              }
+            }
+          });
+          
+          saveMessagesToStorage();
+          updateWhatsappStats();
+          updateCrispyStats();
+          applyFilters();
+          updateTodayStats();
+          updateRecentActivity();
+          showToast('CRISPY CHICKEN offer delivery process completed', 'crispy');
+          addNotification('info', 'CRISPY CHICKEN offer delivery process completed');
+        }, 3000);
+      }, 1000);
+      
+      // Clear selection
+      selectedCustomers.clear();
+      updateBulkCustomerActions();
+    }
+    
+    function editCustomer(customerId) {
+      const customer = customers.find(c => c.id === customerId);
+      if (!customer) return;
+      
+      // Populate the edit form
+      document.getElementById('editCustomerId').value = customer.id;
+      document.getElementById('editCustomerName').value = customer.name;
+      document.getElementById('editCustomerPhone').value = customer.phone;
+      document.getElementById('editCustomerEmail').value = customer.email || '';
+      document.getElementById('editCustomerCity').value = customer.city || '';
+      document.getElementById('editCustomerStatus').value = customer.status;
+      
+      // Show the modal
+      const modal = new bootstrap.Modal(document.getElementById('customerModal'));
+      modal.show();
+    }
+    
+    function saveEditedCustomer() {
+      const customerId = parseInt(document.getElementById('editCustomerId').value);
+      const name = document.getElementById('editCustomerName').value;
+      const phone = document.getElementById('editCustomerPhone').value;
+      const email = document.getElementById('editCustomerEmail').value;
+      const city = document.getElementById('editCustomerCity').value;
+      const status = document.getElementById('editCustomerStatus').value;
+      
+      // Find the customer index
+      const customerIndex = customers.findIndex(c => c.id === customerId);
+      if (customerIndex === -1) return;
+      
+      // Check if phone number already exists for another customer
+      const existingCustomer = customers.find(c => c.phone === phone && c.id !== customerId);
+      if (existingCustomer) {
+        showToast('A customer with this phone number already exists', 'warning');
+        return;
+      }
+      
+      // Update customer data
+      customers[customerIndex] = {
+        ...customers[customerIndex],
+        name,
+        phone,
+        email,
+        city,
+        status
+      };
+      
+      saveCustomersToStorage();
+      
+      // Update UI
+      updateCustomerList();
+      updateCustomerCount();
+      updateStatistics();
+      
+      // Hide the modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
+      modal.hide();
+      
+      // Show success message
+      showToast('Customer updated successfully', 'success');
+      addNotification('success', `Customer ${name} updated successfully`);
+    }
+    
+    function deleteCustomer(customerId) {
+      if (!confirm('Are you sure you want to delete this customer?')) return;
+      
+      const customer = customers.find(c => c.id === customerId);
+      if (!customer) return;
+      
+      // Remove customer from array
+      customers = customers.filter(c => c.id !== customerId);
+      saveCustomersToStorage();
+      
+      // Update UI
+      updateCustomerList();
+      updateCustomerCount();
+      updateStatistics();
+      
+      // Show success message
+      showToast('Customer deleted successfully', 'success');
+      addNotification('success', `Customer ${customer.name} deleted successfully`);
+    }
+    
+    // LocalStorage Functions
+    function saveCustomersToStorage() {
+      localStorage.setItem('crispyCustomers', JSON.stringify(customers));
+    }
+    
+    function loadCustomersFromStorage() {
+      const storedCustomers = localStorage.getItem('crispyCustomers');
+      if (storedCustomers) {
+        customers = JSON.parse(storedCustomers);
+        
+        // Convert date strings back to Date objects
+        customers.forEach(customer => {
+          if (customer.createdAt) {
+            customer.createdAt = new Date(customer.createdAt);
+          }
+        });
+      }
+    }
+    
+    function saveMessagesToStorage() {
+      localStorage.setItem('crispyMessages', JSON.stringify(messages));
+    }
+    
+    function loadMessagesFromStorage() {
+      const storedMessages = localStorage.getItem('crispyMessages');
+      if (storedMessages) {
+        messages = JSON.parse(storedMessages);
+        
+        // Convert date strings back to Date objects
+        messages.forEach(message => {
+          if (message.sentAt) {
+            message.sentAt = new Date(message.sentAt);
+          }
+          if (message.deliveredAt) {
+            message.deliveredAt = new Date(message.deliveredAt);
+          }
+        });
+      }
+    }
+    
+    function saveScheduledOffersToStorage() {
+      localStorage.setItem('crispyScheduledOffers', JSON.stringify(scheduledOffers));
+    }
+    
+    function loadScheduledOffersFromStorage() {
+      const storedScheduledOffers = localStorage.getItem('crispyScheduledOffers');
+      if (storedScheduledOffers) {
+        scheduledOffers = JSON.parse(storedScheduledOffers);
+        
+        // Convert date strings back to Date objects
+        scheduledOffers.forEach(offer => {
+          if (offer.scheduledAt) {
+            offer.scheduledAt = new Date(offer.scheduledAt);
+          }
+        });
+      }
+    }
+    
+    // File Upload Functions
+    function showUploadModal() {
+      const modal = new bootstrap.Modal(document.getElementById('uploadModal'));
+      modal.show();
+      
+      // Reset form
+      resetUploadForm();
+    }
+    
+    function resetUploadForm() {
+      selectedFile = null;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('fileInfo').classList.remove('active');
+      document.getElementById('uploadProgress').classList.remove('active');
+      document.getElementById('uploadResults').classList.remove('active');
+      document.getElementById('uploadBtn').disabled = true;
+    }
+    
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('fileUploadArea').classList.add('dragover');
+    }
+    
+    function handleDragLeave(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('fileUploadArea').classList.remove('dragover');
+    }
+    
+    function handleDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('fileUploadArea').classList.remove('dragover');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    }
+    
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    }
+    
+    function handleFile(file) {
+      // Check file type
+      const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+      if (!validTypes.includes(file.type)) {
+        showToast('Please select a valid CSV or Excel file', 'error');
+        return;
+      }
+      
+      selectedFile = file;
+      
+      // Display file info
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = formatFileSize(file.size);
+      document.getElementById('fileInfo').classList.add('active');
+      document.getElementById('uploadBtn').disabled = false;
+    }
+    
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function processFile() {
+      if (!selectedFile) return;
+      
+      // Show progress
+      document.getElementById('uploadProgress').classList.add('active');
+      document.getElementById('progressBar').style.width = '0%';
+      document.getElementById('progressText').textContent = 'Processing...';
+      
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        try {
+          let data = [];
+          
+          if (selectedFile.name.endsWith('.csv')) {
+            // Parse CSV
+            data = parseCSV(e.target.result);
+          } else {
+            // Parse Excel
+            data = parseExcel(e.target.result);
+          }
+          
+          // Process data
+          processCustomerData(data);
+        } catch (error) {
+          showToast('Error processing file: ' + error.message, 'error');
+          resetUploadProgress();
+        }
+      };
+      
+      reader.onerror = function() {
+        showToast('Error reading file', 'error');
+        resetUploadProgress();
+      };
+      
+      // Read file
+      if (selectedFile.name.endsWith('.csv')) {
+        reader.readAsText(selectedFile);
+      } else {
+        reader.readAsArrayBuffer(selectedFile);
+      }
+    }
+    
+    function parseCSV(csvText) {
+      const lines = csvText.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const data = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '') continue;
+        
+        const values = lines[i].split(',').map(v => v.trim());
+        const row = {};
+        
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        
+        data.push(row);
+      }
+      
+      return data;
+    }
+    
+    function parseExcel(arrayBuffer) {
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+      
+      return data;
+    }
+    
+    function processCustomerData(data) {
+      let successCount = 0;
+      let duplicateCount = 0;
+      let errorCount = 0;
+      
+      // Update progress
+      updateProgress(10, 'Validating data...');
+      
+      // Process each row
+      data.forEach((row, index) => {
+        try {
+          // Validate required fields
+          if (!row.name || !row.phone) {
+            errorCount++;
+            return;
+          }
+          
+          // Check if phone already exists
+          const existingCustomer = customers.find(c => c.phone === row.phone);
+          if (existingCustomer) {
+            duplicateCount++;
+            return;
+          }
+          
+          // Create new customer
+          const newCustomer = {
+            id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
+            name: row.name,
+            phone: row.phone,
+            email: row.email || '',
+            city: row.city || '',
+            status: row.status || 'active',
+            createdAt: new Date()
+          };
+          
+          // Add to customers array
+          customers.push(newCustomer);
+          successCount++;
+          
+          // Update progress
+          const progress = 10 + (index + 1) / data.length * 80;
+          updateProgress(progress, `Processing row ${index + 1} of ${data.length}...`);
+          
+        } catch (error) {
+          errorCount++;
+        }
+      });
+      
+      // Save to localStorage
+      saveCustomersToStorage();
+      
+      // Update progress
+      updateProgress(100, 'Completed!');
+      
+      // Show results
+      setTimeout(() => {
+        document.getElementById('totalRecords').textContent = data.length;
+        document.getElementById('successCount').textContent = successCount;
+        document.getElementById('duplicateCount').textContent = duplicateCount;
+        document.getElementById('errorCount').textContent = errorCount;
+        document.getElementById('uploadResults').classList.add('active');
+        
+        // Update UI
+        updateCustomerList();
+        updateCustomerCount();
+        updateStatistics();
+        
+        // Show success message
+        showToast(`Upload completed: ${successCount} customers added, ${duplicateCount} duplicates skipped, ${errorCount} errors`, 'success');
+        addNotification('success', `Upload completed: ${successCount} customers added`);
+        
+        // Reset progress after delay
+        setTimeout(() => {
+          resetUploadProgress();
+        }, 3000);
+      }, 500);
+    }
+    
+    function updateProgress(percent, text) {
+      document.getElementById('progressBar').style.width = percent + '%';
+      document.getElementById('progressText').textContent = text;
+    }
+    
+    function resetUploadProgress() {
+      document.getElementById('uploadProgress').classList.remove('active');
+      document.getElementById('progressBar').style.width = '0%';
+      document.getElementById('progressText').textContent = 'Processing...';
+    }
+    
+    // Message Selection Functions
+    function toggleSelectAllMessages() {
+      const selectAll = document.getElementById('selectAllMessages').checked;
+      const checkboxes = document.querySelectorAll('.message-checkbox');
+      
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll;
+        const messageId = checkbox.dataset.id;
+        if (selectAll) {
+          selectedMessages.add(messageId);
+        } else {
+          selectedMessages.delete(messageId);
+        }
+      });
+      
+      updateBulkMessageActions();
+    }
+    
+    function toggleMessageSelection(messageId) {
+      if (selectedMessages.has(messageId)) {
+        selectedMessages.delete(messageId);
+      } else {
+        selectedMessages.add(messageId);
+      }
+      
+      updateBulkMessageActions();
+      updateSelectAllCheckbox();
+    }
+    
+    function updateSelectAllCheckbox() {
+      const selectAllCheckbox = document.getElementById('selectAllMessages');
+      const checkboxes = document.querySelectorAll('.message-checkbox');
+      
+      if (checkboxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        return;
+      }
+      
+      const checkedCount = document.querySelectorAll('.message-checkbox:checked').length;
+      
+      if (checkedCount === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+      } else if (checkedCount === checkboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+      } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+      }
+    }
+    
+    function updateBulkMessageActions() {
+      const bulkActions = document.getElementById('bulkMessageActions');
+      const selectedCount = document.getElementById('selectedMessagesCount');
+      
+      if (selectedMessages.size > 0) {
+        bulkActions.style.display = 'block';
+        selectedCount.textContent = selectedMessages.size;
+      } else {
+        bulkActions.style.display = 'none';
+      }
+    }
+    
+    function bulkResendMessages() {
+      if (selectedMessages.size === 0) return;
+      
+      selectedMessages.forEach(messageId => {
+        const messageIndex = messages.findIndex(m => m.id === messageId);
+        if (messageIndex !== -1) {
+          // Update message status and retry count
+          messages[messageIndex].status = 'pending';
+          messages[messageIndex].retryCount = (messages[messageIndex].retryCount || 0) + 1;
+          messages[messageIndex].sentAt = new Date();
+        }
+      });
+      
+      saveMessagesToStorage();
+      
+      // Show success toast
+      showToast(`${selectedMessages.size} messages resent`, 'success');
+      addNotification('success', `${selectedMessages.size} messages resent`);
+      
+      // Apply filters to update the view
+      applyFilters();
+      
+      // Simulate delivery after a delay
+      setTimeout(() => {
+        selectedMessages.forEach(messageId => {
+          const messageIndex = messages.findIndex(m => m.id === messageId);
+          if (messageIndex !== -1) {
+            const success = Math.random() > 0.3; // 70% success rate for retries
+            
+            if (success) {
+              messages[messageIndex].status = 'delivered';
+              messages[messageIndex].deliveredAt = new Date();
+            } else {
+              messages[messageIndex].status = 'failed';
+            }
+          }
+        });
+        
+        saveMessagesToStorage();
+        applyFilters();
+        updateTodayStats();
+        updateRecentActivity();
+      }, 3000);
+      
+      // Clear selection
+      selectedMessages.clear();
+      updateBulkMessageActions();
+    }
+    
+    function bulkDeleteMessages() {
+      if (selectedMessages.size === 0) return;
+      
+      if (!confirm(`Are you sure you want to delete ${selectedMessages.size} messages?`)) return;
+      
+      messages = messages.filter(message => !selectedMessages.has(message.id));
+      saveMessagesToStorage();
+      
+      showToast(`${selectedMessages.size} messages deleted`, 'success');
+      addNotification('success', `${selectedMessages.size} messages deleted`);
+      
+      // Apply filters to update the view
+      applyFilters();
+      updateStatistics();
+      updateTodayStats();
+      updateRecentActivity();
+      
+      // Clear selection
+      selectedMessages.clear();
+      updateBulkMessageActions();
+    }
+    
+    function clearMessageSelection() {
+      selectedMessages.clear();
+      document.querySelectorAll('.message-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      updateBulkMessageActions();
+      updateSelectAllCheckbox();
+    }
+    
+    // Recent Activity Functions
+    function updateRecentActivity() {
+      const recentActivity = document.getElementById('recentActivity');
+      recentActivity.innerHTML = '';
+      
+      // Get the 10 most recent messages
+      const recentMessages = [...messages]
+        .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
+        .slice(0, 10);
+      
+      if (recentMessages.length === 0) {
+        recentActivity.innerHTML = '<p class="text-center text-muted">No recent activity</p>';
+        return;
+      }
+      
+      recentMessages.forEach(message => {
+        const activityItem = document.createElement('div');
+        activityItem.className = 'activity-item';
+        
+        // Format time
+        const sentTime = new Date(message.sentAt);
+        const now = new Date();
+        const diffMs = now - sentTime;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        let timeText = '';
+        if (diffMins < 1) {
+          timeText = 'Just now';
+        } else if (diffMins < 60) {
+          timeText = `${diffMins} min ago`;
+        } else if (diffHours < 24) {
+          timeText = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        } else {
+          timeText = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        }
+        
+        let iconClass = '';
+        switch (message.status) {
+          case 'sent':
+            iconClass = 'bi-send';
+            break;
+          case 'delivered':
+            iconClass = 'bi-check-circle';
+            break;
+          case 'failed':
+            iconClass = 'bi-exclamation-circle';
+            break;
+          case 'crispy':
+            iconClass = 'bi-fire';
+            break;
+          default:
+            iconClass = 'bi-clock';
+        }
+        
+        activityItem.innerHTML = `
+          <div class="activity-icon ${message.status}">
+            <i class="bi ${iconClass}"></i>
+          </div>
+          <div class="activity-content">
+            <div class="activity-title">${message.status === 'crispy' ? 'CRISPY CHICKEN offer' : 'Message'} ${message.status === 'delivered' ? 'delivered to' : 'sent to'} ${message.recipient}</div>
+            <div class="activity-time">${timeText}</div>
+          </div>
+        `;
+        
+        recentActivity.appendChild(activityItem);
+      });
+    }
+    
+    // Notification Functions
+    function addNotification(type, message) {
+      const notification = {
+        id: Date.now(),
+        type,
+        message,
+        timestamp: new Date()
+      };
+      
+      notifications.unshift(notification);
+      
+      // Keep only the latest 20 notifications
+      if (notifications.length > 20) {
+        notifications = notifications.slice(0, 20);
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('crispyNotifications', JSON.stringify(notifications));
+      
+      // Update notification badge
+      updateNotificationBadge();
+      
+      // Show desktop notification if enabled
+      const settings = JSON.parse(localStorage.getItem('crispySettings')) || {};
+      if (settings.desktopNotifications && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('Message Tracking System', {
+          body: message,
+          icon: '/favicon.ico'
+        });
+      }
+    }
+    
+    function updateNotificationBadge() {
+      const badge = document.getElementById('notificationBadge');
+      const unreadCount = notifications.filter(n => !n.read).length;
+      
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    function showNotifications() {
+      const modal = new bootstrap.Modal(document.getElementById('notificationsModal'));
+      modal.show();
+      
+      const notificationsList = document.getElementById('notificationsList');
+      notificationsList.innerHTML = '';
+      
+      if (notifications.length === 0) {
+        notificationsList.innerHTML = '<p class="text-center text-muted">No notifications</p>';
+        return;
+      }
+      
+      notifications.forEach(notification => {
+        const notificationItem = document.createElement('div');
+        notificationItem.className = 'card mb-2';
+        
+        let iconClass = '';
+        switch (notification.type) {
+          case 'success':
+            iconClass = 'bi-check-circle-fill text-success';
+            break;
+          case 'error':
+            iconClass = 'bi-exclamation-circle-fill text-danger';
+            break;
+          case 'warning':
+            iconClass = 'bi-exclamation-triangle-fill text-warning';
+            break;
+          case 'crispy':
+            iconClass = 'bi-fire-fill text-danger';
+            break;
+          case 'info':
+          default:
+            iconClass = 'bi-info-circle-fill text-info';
+        }
+        
+        // Format time
+        const time = new Date(notification.timestamp);
+        const timeText = time.toLocaleString();
+        
+        notificationItem.innerHTML = `
+          <div class="card-body">
+            <div class="d-flex align-items-start">
+              <i class="bi ${iconClass} me-2"></i>
+              <div>
+                <div>${notification.message}</div>
+                <small class="text-muted">${timeText}</small>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        notificationsList.appendChild(notificationItem);
+      });
+      
+      // Mark all as read
+      notifications.forEach(n => n.read = true);
+      localStorage.setItem('crispyNotifications', JSON.stringify(notifications));
+      updateNotificationBadge();
+    }
+    
+    function clearAllNotifications() {
+      notifications = [];
+      localStorage.setItem('crispyNotifications', JSON.stringify(notifications));
+      updateNotificationBadge();
+      
+      const notificationsList = document.getElementById('notificationsList');
+      notificationsList.innerHTML = '<p class="text-center text-muted">No notifications</p>';
+    }
+    
+    // Message Simulation Functions
+    function startSimulation() {
+      if (simulationInterval) return;
+      
+      addSimulationLog('info', 'Simulation started');
+      
+      simulationInterval = setInterval(() => {
+        // Randomly update message statuses
+        const pendingMessages = messages.filter(m => m.status === 'pending');
+        if (pendingMessages.length > 0) {
+          const randomMessage = pendingMessages[Math.floor(Math.random() * pendingMessages.length)];
+          const success = Math.random() > 0.2; // 80% success rate
+          
+          if (success) {
+            randomMessage.status = 'delivered';
+            randomMessage.deliveredAt = new Date();
+            addSimulationLog('success', `Message ${randomMessage.id} delivered to ${randomMessage.recipient}`);
+            addNotification('success', `Message ${randomMessage.id} delivered to ${randomMessage.recipient}`);
+          } else {
+            randomMessage.status = 'failed';
+            addSimulationLog('error', `Message ${randomMessage.id} failed to deliver to ${randomMessage.recipient}`);
+            addNotification('error', `Message ${randomMessage.id} failed to deliver to ${randomMessage.recipient}`);
+          }
+          
+          saveMessagesToStorage();
+          applyFilters();
+          updateStatistics();
+          updateTodayStats();
+          updateRecentActivity();
+        }
+        
+        // Randomly add new messages
+        if (Math.random() > 0.7) {
+          addRandomMessage();
+        }
+      }, 2000);
+    }
+    
+    function pauseSimulation() {
+      if (simulationInterval) {
+        clearInterval(simulationInterval);
+        simulationInterval = null;
+        addSimulationLog('warning', 'Simulation paused');
+      }
+    }
+    
+    function stopSimulation() {
+      if (simulationInterval) {
+        clearInterval(simulationInterval);
+        simulationInterval = null;
+        addSimulationLog('error', 'Simulation stopped');
+      }
+    }
+    
+    function addRandomMessage() {
+      const recipients = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Davis'];
+      const platforms = ['SMS', 'WhatsApp', 'Email'];
+      const messagesList = [
+        'Your order has been shipped',
+        'Payment received successfully',
+        'Appointment reminder',
+        'Special offer just for you',
+        'Your account has been updated'
+      ];
+      
+      const newMessage = {
+        id: 'MSG' + String(messages.length + 1).padStart(3, '0'),
+        recipient: recipients[Math.floor(Math.random() * recipients.length)],
+        phone: '+97150' + Math.floor(Math.random() * 10000000),
+        message: messagesList[Math.floor(Math.random() * messagesList.length)],
+        platform: platforms[Math.floor(Math.random() * platforms.length)],
+        status: 'pending',
+        sentAt: new Date(),
+        deliveredAt: null,
+        retryCount: 0
+      };
+      
+      messages.unshift(newMessage);
+      saveMessagesToStorage();
+      
+      addSimulationLog('info', `New message ${newMessage.id} sent to ${newMessage.recipient}`);
+      addNotification('info', `New message ${newMessage.id} sent to ${newMessage.recipient}`);
+      
+      applyFilters();
+      updateStatistics();
+      updateTodayStats();
+      updateRecentActivity();
+    }
+    
+    function addSimulationLog(type, message) {
+      const simulationLog = document.getElementById('simulationLog');
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      
+      const time = new Date().toLocaleTimeString();
+      
+      logEntry.innerHTML = `
+        <span class="log-time">[${time}]</span>
+        <span class="log-status ${type}">${message}</span>
+      `;
+      
+      simulationLog.appendChild(logEntry);
+      
+      // Auto-scroll to bottom
+      simulationLog.scrollTop = simulationLog.scrollHeight;
+      
+      // Keep only the latest 20 log entries
+      while (simulationLog.children.length > 20) {
+        simulationLog.removeChild(simulationLog.firstChild);
+      }
+    }
+    
+    // Scheduled Offers Functions
+    function updateScheduledOffersList() {
+      const scheduledOffersList = document.getElementById('scheduledOffersList');
+      scheduledOffersList.innerHTML = '';
+      
+      if (scheduledOffers.length === 0) {
+        scheduledOffersList.innerHTML = '<p class="text-center">No scheduled offers</p>';
+        return;
+      }
+      
+      scheduledOffers.forEach(offer => {
+        const offerItem = document.createElement('div');
+        offerItem.className = 'scheduled-offer-item';
+        
+        const scheduledTime = new Date(offer.scheduledAt).toLocaleString();
+        
+        offerItem.innerHTML = `
+          <div class="scheduled-offer-info">
+            <div class="scheduled-offer-time">${scheduledTime}</div>
+            <div class="scheduled-offer-message">${offer.message.substring(0, 100)}${offer.message.length > 100 ? '...' : ''}</div>
+          </div>
+          <div class="scheduled-offer-actions">
+            <button class="btn btn-sm btn-danger" onclick="cancelScheduledOffer('${offer.id}')">
+              <i class="bi bi-x"></i> Cancel
+            </button>
+          </div>
+        `;
+        
+        scheduledOffersList.appendChild(offerItem);
+      });
+    }
+    
+    function cancelScheduledOffer(offerId) {
+      scheduledOffers = scheduledOffers.filter(offer => offer.id !== offerId);
+      saveScheduledOffersToStorage();
+      updateScheduledOffersList();
+      showToast('Scheduled offer cancelled', 'success');
+      addNotification('success', 'Scheduled offer cancelled');
+    }
+    
+    function checkScheduledOffers() {
+      // Check every minute if any scheduled offers need to be sent
+      setInterval(() => {
+        const now = new Date();
+        
+        scheduledOffers.forEach((offer, index) => {
+          if (new Date(offer.scheduledAt) <= now) {
+            // Send the offer
+            sendScheduledOffer(offer);
+            
+            // Remove from scheduled offers
+            scheduledOffers.splice(index, 1);
+            saveScheduledOffersToStorage();
+            updateScheduledOffersList();
+          }
+        });
+      }, 60000); // Check every minute
+    }
+    
+    function sendScheduledOffer(offer) {
+      const activeCustomers = customers.filter(c => c.status === 'active');
+      
+      if (activeCustomers.length === 0) {
+        showToast('No active customers found', 'warning');
+        return;
+      }
+      
+      // Create new WhatsApp offers for each active customer
+      const newOffers = activeCustomers.map((customer, index) => {
+        return {
+          id: 'CRS' + String(crispyOffers.length + index + 1).padStart(3, '0'),
+          recipient: customer.name,
+          phone: customer.phone,
+          message: offer.message,
+          platform: 'WhatsApp',
+          status: 'pending',
+          sentAt: new Date(),
+          deliveredAt: null,
+          retryCount: 0,
+          whatsappNumber: offer.whatsappNumber
+        };
+      });
+      
+      // Add the new offers to the crispyOffers array
+      crispyOffers = [...newOffers, ...crispyOffers];
+      
+      // Also add to the messages array for tracking
+      messages = [...newOffers, ...messages];
+      saveMessagesToStorage();
+      
+      // Update the UI
+      updateCustomerCount();
+      updateWhatsappStats();
+      updateCrispyStats();
+      applyFilters();
+      updateTodayStats();
+      updateRecentActivity();
+      
+      showToast(`Sending scheduled CRISPY CHICKEN offer to ${activeCustomers.length} customers...`, 'crispy');
+      addNotification('crispy', `Sending scheduled CRISPY CHICKEN offer to ${activeCustomers.length} customers`);
+      
+      // Simulate sending process
+      setTimeout(() => {
+        // Update status to 'crispy'
+        newOffers.forEach(offer => {
+          const index = messages.findIndex(m => m.id === offer.id);
+          if (index !== -1) {
+            messages[index].status = 'crispy';
+          }
+          
+          const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+          if (offerIndex !== -1) {
+            crispyOffers[offerIndex].status = 'sent';
+          }
+        });
+        
+        saveMessagesToStorage();
+        updateWhatsappStats();
+        updateCrispyStats();
+        applyFilters();
+        updateTodayStats();
+        updateRecentActivity();
+        showToast('CRISPY CHICKEN offers sent successfully', 'crispy');
+        addNotification('success', 'CRISPY CHICKEN offers sent successfully');
+        
+        // Simulate delivery after a delay
+        setTimeout(() => {
+          newOffers.forEach(offer => {
+            const index = messages.findIndex(m => m.id === offer.id);
+            if (index !== -1) {
+              // 90% success rate for delivery
+              const success = Math.random() > 0.1;
+              if (success) {
+                messages[index].status = 'delivered';
+                messages[index].deliveredAt = new Date();
+                
+                const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+                if (offerIndex !== -1) {
+                  crispyOffers[offerIndex].status = 'delivered';
+                  crispyOffers[offerIndex].deliveredAt = new Date();
+                }
+              } else {
+                messages[index].status = 'failed';
+                
+                const offerIndex = crispyOffers.findIndex(o => o.id === offer.id);
+                if (offerIndex !== -1) {
+                  crispyOffers[offerIndex].status = 'failed';
+                }
+              }
+            }
+          });
+          
+          saveMessagesToStorage();
+          updateWhatsappStats();
+          updateCrispyStats();
+          applyFilters();
+          updateTodayStats();
+          updateRecentActivity();
+          showToast('CRISPY CHICKEN offer delivery process completed', 'crispy');
+          addNotification('info', 'CRISPY CHICKEN offer delivery process completed');
+        }, 3000);
+      }, 1000);
+    }
+    
+    // Auto Refresh Functions
+    function setupAutoRefresh() {
+      // Clear existing interval
+      if (refreshIntervalId) {
+        clearInterval(refreshIntervalId);
+      }
+      
+      const settings = JSON.parse(localStorage.getItem('crispySettings')) || {};
+      const refreshInterval = (settings.refreshInterval || 10) * 1000; // Convert to milliseconds
+      
+      refreshIntervalId = setInterval(() => {
+        refreshData();
+      }, refreshInterval);
+    }
+  </script>
+</body>
+</html>
