@@ -246,6 +246,11 @@ cd inference
 python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-hf-path /path/to/bf16_weights
 ```
 
+> [!TIP]
+> The conversion script now supports optional arguments for broader portability:
+> - `--device`: `auto` (default), `cuda`, or `cpu`. When set to `auto`, the script prefers CUDA if available, otherwise falls back to CPU. Use `cpu` to force a CPU-only path on systems without GPUs.
+> - `--block-size`: Block size used during quantization/dequantization (default `128`). This should match the model’s tiling settings at export time.
+
 > [!NOTE]
 > Hugging Face's Transformers has not been directly supported yet.
 
