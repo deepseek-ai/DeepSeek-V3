@@ -188,7 +188,7 @@ class Linear(nn.Module):
         else:
             self.register_parameter("scale", None)
         if bias:
-            self.bias = nn.Parameter(torch.empty(out_features))
+            self.bias = nn.Parameter(torch.empty(out_features, dtype=torch.float32))
         else:
             self.register_parameter("bias", None)
 
