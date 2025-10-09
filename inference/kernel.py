@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 import triton
@@ -7,7 +7,7 @@ from triton import Config
 
 
 @triton.jit
-def act_quant_kernel(x_ptr, y_ptr, s_ptr, BLOCK_SIZE: tl.constexpr):
+def act_quant_kernel(x_ptr, y_ptr, s_ptr, BLOCK_SIZE: tl.constexpr, scale_fmt: tl.constexpr):
     """
     Quantizes the input tensor `x_ptr` and stores the result in `y_ptr` and the scaling factor in `s_ptr`.
 
@@ -23,21 +23,26 @@ def act_quant_kernel(x_ptr, y_ptr, s_ptr, BLOCK_SIZE: tl.constexpr):
     pid = tl.program_id(axis=0)
     offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     x = tl.load(x_ptr + offs).to(tl.float32)
-    s = tl.max(tl.abs(x)) / 448.
+    amax = tl.max(tl.abs(x)) # reduction
+    amax = tl.maximum(amax, 1e-4) # clamp to 1e-4
+    s = amax / 448.
+    if scale_fmt == "ue8m0":
+        exp = tl.math.ceil(tl.math.log2(s))
+        s = tl.math.exp2(exp)
     y = x / s
     y = y.to(y_ptr.dtype.element_ty)
     tl.store(y_ptr + offs, y)
     tl.store(s_ptr + pid, s)
 
 
-def act_quant(x: torch.Tensor, block_size: int = 128) -> Tuple[torch.Tensor, torch.Tensor]:
+def act_quant(x: torch.Tensor, block_size: int = 128, scale_fmt: Optional[str] = None) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Quantizes the input tensor `x` using block-wise quantization.
 
     Args:
         x (torch.Tensor): The input tensor to be quantized. Must be contiguous and its last dimension size must be divisible by `block_size`.
         block_size (int, optional): The size of the blocks to be used for quantization. Default is 128.
-
+        scale_fmt (Optional[str], optional): The format of the scale. Default is None.
     Returns:
         Tuple[torch.Tensor, torch.Tensor]: A tuple containing:
             - The quantized tensor with dtype `torch.float8_e4m3fn`.
@@ -48,7 +53,7 @@ def act_quant(x: torch.Tensor, block_size: int = 128) -> Tuple[torch.Tensor, tor
     y = torch.empty_like(x, dtype=torch.float8_e4m3fn)
     s = x.new_empty(*x.size()[:-1], x.size(-1) // block_size, dtype=torch.float32)
     grid = lambda meta: (triton.cdiv(x.numel(), meta['BLOCK_SIZE']), )
-    act_quant_kernel[grid](x, y, s, BLOCK_SIZE=block_size)
+    act_quant_kernel[grid](x, y, s, BLOCK_SIZE=block_size, scale_fmt=scale_fmt)
     return y, s
 
 

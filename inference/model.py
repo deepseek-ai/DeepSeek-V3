@@ -25,6 +25,7 @@ class ModelArgs:
         max_batch_size (int): Maximum batch size.
         max_seq_len (int): Maximum sequence length.
         dtype (Literal["bf16", "fp8"]): Data type for computations.
+        scale_fmt (Optional[str]): Format for quantization scale.
         vocab_size (int): Vocabulary size.
         dim (int): Model dimension.
         inter_dim (int): Intermediate dimension for MLP layers.
@@ -54,6 +55,7 @@ class ModelArgs:
     max_batch_size: int = 8
     max_seq_len: int = 4096 * 4
     dtype: Literal["bf16", "fp8"] = "bf16"
+    scale_fmt: Optional[str] = None
     vocab_size: int = 102400
     dim: int = 2048
     inter_dim: int = 10944
@@ -126,7 +128,7 @@ class ParallelEmbedding(nn.Module):
         return y
 
 
-def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] = None) -> torch.Tensor:
+def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] = None, scale_fmt: Optional[str] = None) -> torch.Tensor:
     """
     Applies a linear transformation to the incoming data: y = xA^T + b.
     This function supports specialized implementations based on quantization
@@ -154,7 +156,7 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
         weight = weight_dequant(weight, weight.scale)
         return F.linear(x, weight, bias)
     else:
-        x, scale = act_quant(x, block_size)
+        x, scale = act_quant(x, block_size, scale_fmt)
         y = fp8_gemm(x, scale, weight, weight.scale)
         if bias is not None:
             y += bias
@@ -172,6 +174,7 @@ class Linear(nn.Module):
         dtype (optional): Data type for the layer. Defaults to `torch.bfloat16`.
     """
     dtype = torch.bfloat16
+    scale_fmt: Optional[str] = None
 
     def __init__(self, in_features: int, out_features: int, bias: bool = False, dtype = None):
         super().__init__()
@@ -199,7 +202,7 @@ class Linear(nn.Module):
         Returns:
             torch.Tensor: Transformed tensor after linear computation.
         """
-        return linear(x, self.weight, self.bias)
+        return linear(x, self.weight, self.bias, self.scale_fmt)
 
 
 class ColumnParallelLinear(Linear):
@@ -755,6 +758,7 @@ class Transformer(nn.Module):
         world_size = dist.get_world_size() if dist.is_initialized() else 1
         rank = dist.get_rank() if dist.is_initialized() else 0
         Linear.dtype = torch.float8_e4m3fn if args.dtype == "fp8" else torch.bfloat16
+        Linear.scale_fmt = args.scale_fmt
         super().__init__()
         self.max_seq_len = args.max_seq_len
         self.embed = ParallelEmbedding(args.vocab_size, args.dim)
