@@ -16,7 +16,7 @@ jobs:
             const issue = context.payload.issue
             const body = issue.body?.toLowerCase() || ""
 
-            const spamKeywords = ["pls fix", "help me", "urgent", "asap", "???", "wtf"]
+            const spamKeywords = ["pls fix", "help me", "urgent", "asap", "???", "wtf"] // add more keywords here if needed in the futrue 
             const isSpam = spamKeywords.some(k => body.includes(k))
 
             if (isSpam) {
