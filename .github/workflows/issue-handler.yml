@@ -1,0 +1,52 @@
+name: Issue Auto Handler
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  manage-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run issue triage bot
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue
+            const body = issue.body?.toLowerCase() || ""
+
+            // Rules
+            const spamKeywords = ["pls fix", "help me", "urgent", "asap", "???", "wtf"]
+            const isSpam = spamKeywords.some(k => body.includes(k))
+
+            if (isSpam) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: issue.number,
+                labels: ['spam']
+              })
+
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body: " This issue seems incomplete or low-effort. Please follow the issue template or provide more details. Thanks!"
+              })
+
+              await github.rest.issues.lock({
+                ...context.repo,
+                issue_number: issue.number,
+                lock_reason: "off-topic"
+              })
+            } else {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: issue.number,
+                labels: ['triage']
+              })
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body: "Thanks for the report! Our team will check this soon " 
+              })
+            }
