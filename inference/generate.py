@@ -9,6 +9,7 @@ from transformers import AutoTokenizer
 from safetensors.torch import load_model
 
 from model import Transformer, ModelArgs
+import re 
 
 
 def sample(logits, temperature: float = 1.0):
@@ -67,6 +68,24 @@ def generate(
         tokens[:, cur_pos] = next_token
         finished |= torch.logical_and(~prompt_mask[:, cur_pos], next_token == eos_id)
         prev_pos = cur_pos
+                # === FIX for DeepSeek-V3 Issue #1008 ===
+        # Detect infinite repeating loops like "A5A5A5A5..." or same token repetition
+
+        # Convert current generated tokens to string for pattern check
+        decoded_output = "".join([str(t) for t in tokens[0, :cur_pos].tolist()])
+
+        # (a) Detect if "A5" repeats 10 or more times continuously
+        if re.search(r"(A5){10,}", decoded_output):
+            print("[Warning] Detected excessive 'A5' repetition — stopping generation early.")
+            break
+
+        # (b) Detect same token repeated multiple times (generic loop check)
+        if cur_pos > 10:
+            last_10 = tokens[0, cur_pos-10:cur_pos].tolist()
+            if len(set(last_10)) == 1:
+                print("[Warning] Detected same token repetition — stopping generation early.")
+                break
+        # === END FIX ===
         if finished.all():
             break
     completion_tokens = []
