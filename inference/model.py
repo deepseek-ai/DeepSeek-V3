@@ -131,33 +131,24 @@ class ParallelEmbedding(nn.Module):
 def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] = None, scale_fmt: Optional[str] = None) -> torch.Tensor:
     """
     Applies a linear transformation to the incoming data: y = xA^T + b.
-    This function supports specialized implementations based on quantization
-    and tensor formats.
 
     Args:
         x (torch.Tensor): The input tensor.
-        weight (torch.Tensor): The weight tensor. It may be quantized and 
-            requires dequantization for certain cases.
+        weight (torch.Tensor): The weight tensor.
         bias (Optional[torch.Tensor]): The bias tensor to be added. Default is None.
+        scale_fmt (Optional[str], optional): The format of the scale. Default is None.
 
     Returns:
-        torch.Tensor: The result of the linear transformation, which may involve 
-        quantization-aware computations depending on the input parameters.
-
-    Notes:
-        - If `weight` is quantized (e.g., `element_size() == 1`), a dequantized version 
-          is used for computation.
-        - If `gemm_impl == "bf16"`, dequantization and a `bf16` GEMM operation are applied.
-        - For other cases, the function applies quantization to `x` and uses `fp8_gemm` for computation.
+        torch.Tensor: The result of the linear transformation.
     """
     if weight.element_size() > 1:
         return F.linear(x, weight, bias)
     elif gemm_impl == "bf16":
-        weight = weight_dequant(weight, weight.scale)
+        weight = weight_dequant(weight, weight.scale, scale_fmt=scale_fmt)
         return F.linear(x, weight, bias)
     else:
         x, scale = act_quant(x, block_size, scale_fmt)
-        y = fp8_gemm(x, scale, weight, weight.scale)
+        y = fp8_gemm(x, scale, weight, weight.scale, scale_fmt)
         if bias is not None:
             y += bias
         return y
@@ -478,7 +469,7 @@ class MLA(nn.Module):
             self.v_cache[:bsz, start_pos:end_pos] = v
             scores = torch.einsum("bshd,bthd->bsht", q, self.k_cache[:bsz, :end_pos]) * self.softmax_scale
         else:
-            wkv_b = self.wkv_b.weight if self.wkv_b.scale is None else weight_dequant(self.wkv_b.weight, self.wkv_b.scale, block_size) 
+            wkv_b = self.wkv_b.weight if self.wkv_b.scale is None else weight_dequant(self.wkv_b.weight, self.wkv_b.scale, block_size, Linear.scale_fmt) 
             wkv_b = wkv_b.view(self.n_local_heads, -1, self.kv_lora_rank)
             q_nope = torch.einsum("bshd,hdc->bshc", q_nope, wkv_b[:, :self.qk_nope_head_dim])
             self.kv_cache[:bsz, start_pos:end_pos] = self.kv_norm(kv)
