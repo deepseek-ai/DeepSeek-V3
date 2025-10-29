@@ -229,7 +229,7 @@ We also provide OpenAI-Compatible API at DeepSeek Platform: [platform.deepseek.c
 DeepSeek-V3 can be deployed locally using the following hardware and open-source community software:
 
 1. **DeepSeek-Infer Demo**: We provide a simple and lightweight demo for FP8 and BF16 inference.
-2. **SGLang**: Fully support the DeepSeek-V3 model in both BF16 and FP8 inference modes, with Multi-Token Prediction [coming soon](https://github.com/sgl-project/sglang/issues/2591).
+2. **SGLang**: Fully support the DeepSeek-V3 model in both BF16 and FP8 inference modes, with Multi-Token Prediction [details here](https://lmsys.org/blog/2025-07-17-mtp/).
 3. **LMDeploy**: Enables efficient FP8 and BF16 inference for local and cloud deployment.
 4. **TensorRT-LLM**: Currently supports BF16 inference and INT4/8 quantization, with FP8 support coming soon.
 5. **vLLM**: Support DeepSeek-V3 model with FP8 and BF16 modes for tensor parallelism and pipeline parallelism.
