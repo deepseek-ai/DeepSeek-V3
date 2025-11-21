@@ -1,0 +1,79 @@
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.25
+alembic==1.13.1
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# Web Scraping
+beautifulsoup4==4.12.3
+requests==2.31.0
+httpx==0.26.0
+scrapy==2.11.0
+selenium==4.16.0
+lxml==5.1.0
+
+# Social Media APIs
+tweepy==4.14.0
+instagrapi==2.0.0
+tiktok-api==6.3.1
+
+# Data Processing
+pandas==2.1.4
+numpy==1.26.3
+
+# NLP & Text Processing
+openai==1.7.2
+transformers==4.36.2
+spacy==3.7.2
+nltk==3.8.1
+
+# Scheduling
+apscheduler==3.10.4
+celery==5.3.4
+redis==5.0.1
+
+# Caching
+aiocache==0.12.2
+diskcache==5.6.3
+
+# Configuration
+python-dotenv==1.0.0
+
+# HTTP & API
+aiohttp==3.9.1
+tenacity==8.2.3
+
+# Date & Time
+python-dateutil==2.8.2
+pytz==2023.3.post1
+
+# Utilities
+loguru==0.7.2
+python-multipart==0.0.6
+email-validator==2.1.0
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+httpx==0.26.0
+
+# Development
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+pre-commit==3.6.0
+
+# Monitoring
+prometheus-client==0.19.0
+sentry-sdk==1.39.2
+
+# Security
+cryptography==41.0.7
+python-jose[cryptography]==3.3.0
