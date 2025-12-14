@@ -1,30 +1,99 @@
-name: "Mark and close stale issues"
+name: "Stale Issue Management"
 on:
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode'
+        required: false
+        default: false
+        type: boolean
   schedule:
-    - cron: "0 0 * * *"
+    # Run daily at midnight UTC, but staggered to avoid peak hours
+    - cron: "15 0 * * *"
 
 jobs:
   stale:
-    if: ${{ github.repository == 'deepseek-ai/DeepSeek-V3' }}
+    # Use environment secrets if available, otherwise skip
+    if: ${{ github.repository == 'deepseek-ai/DeepSeek-V3' && github.event_name != 'schedule' || !fromJson(vars.ENABLE_SCHEDULED_STALE || 'true') }}
+    
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    
+    # Add timeout to prevent hanging
+    timeout-minutes: 10
+    
     steps:
+      - name: Check repository accessibility
+        run: |
+          gh repo view "${{ github.repository }}" --json name || {
+            echo "Repository not accessible or GitHub CLI not configured"
+            exit 1
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
       - name: "Mark and close stale issues"
         uses: actions/stale@v9
         with:
+          # Configuration
           days-before-issue-stale: 30
           days-before-issue-close: 14
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          
+          # Labels
           stale-issue-label: "stale"
           close-issue-label: "closed-as-stale"
+          
+          # Exemptions
           exempt-issue-labels: |
             pinned
             security
-          stale-issue-message: >
+            bug
+            feature-request
+            good-first-issue
+            help-wanted
+          exempt-issue-assignees: true  # Don't mark issues with assignees
+          exempt-milestones: true  # Don't mark issues in milestones
+          exempt-all-issue-assignees: false
+          exempt-all-pr-assignees: false
+          
+          # Operations
+          operations-per-run: 30  # Limit operations to avoid rate limiting
+          remove-issue-stale-when-updated: true
+          remove-pr-stale-when-updated: true
+          
+          # Messages
+          stale-issue-message: |
             This issue has been automatically marked as stale because it has not had
-            recent activity. It will be closed if no further activity occurs. If you
-            believe this issue is still relevant, please leave a comment to keep it open.
+            recent activity. It will be closed if no further activity occurs.
+            
+            **To keep this issue open:**
+            1. Add a comment with updated information
+            2. Leave a "👍" reaction on this message
+            3. Request specific attention from maintainers
+            
             Thank you for your contributions!
-          close-issue-message: false
-          days-before-pr-stale: -1
-          days-before-pr-close: -1
+          close-issue-message: |
+            This issue was closed because it has been inactive for 14 days since being marked stale.
+            
+            If you believe this is still relevant, please:
+            1. Reopen the issue with updated context
+            2. Create a new issue referencing this one
+            
+            Thank you for understanding!
+          
+          # Logging
+          debug-only: ${{ github.event.inputs.dry-run == 'true' || false }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Filtering
+          only-labels: ""  # Process all issues unless specified
+          
+          # Additional optimization
+          ascending: false  # Process newer issues first (more likely to be active)
+          skip-stale-issue-message: false
+          skip-stale-pr-message: true
