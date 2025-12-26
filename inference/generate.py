@@ -9,6 +9,7 @@ from transformers import AutoTokenizer
 from safetensors.torch import load_model
 
 from model import Transformer, ModelArgs
+from context_tracker import ContextTracker
 
 
 def sample(logits, temperature: float = 1.0):
@@ -120,6 +121,10 @@ def main(
 
     if interactive:
         messages = []
+        context_tracker = ContextTracker(max_seq_len=args.max_seq_len)
+        print(f"\n📊 Context window: {args.max_seq_len:,} tokens")
+        print("💡 Commands: /exit (quit), /clear (new chat), /context (show usage), /summary (get summary prompt)\n")
+
         while True:
             if world_size == 1:
                 prompt = input(">>> ")
@@ -135,13 +140,41 @@ def main(
                 break
             elif prompt == "/clear":
                 messages.clear()
+                context_tracker.reset()
+                print("🔄 Conversation cleared. Starting fresh.\n")
                 continue
+            elif prompt == "/context":
+                print(context_tracker.get_usage_display())
+                remaining_turns = context_tracker.estimate_remaining_turns()
+                print(f"   Estimated remaining turns: ~{remaining_turns}")
+                continue
+            elif prompt == "/summary":
+                print(f"\n💡 Copy and send this prompt to get a summary:\n")
+                print(f"   {context_tracker.get_summary_prompt()}\n")
+                continue
+
             messages.append({"role": "user", "content": prompt})
             prompt_tokens = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+
+            # Update context tracker with current token count
+            context_tracker.update(len(prompt_tokens))
+
+            # Check for warnings before generation
+            should_warn, warning_msg = context_tracker.should_warn()
+            if should_warn:
+                print(warning_msg)
+
             completion_tokens = generate(model, [prompt_tokens], max_new_tokens, tokenizer.eos_token_id, temperature)
             completion = tokenizer.decode(completion_tokens[0], skip_special_tokens=True)
             print(completion)
             messages.append({"role": "assistant", "content": completion})
+
+            # Update tracker with full conversation (including response)
+            full_tokens = tokenizer.apply_chat_template(messages, add_generation_prompt=False)
+            context_tracker.update(len(full_tokens))
+
+            # Display context usage after each response
+            print(f"\n{context_tracker.get_usage_display()}")
     else:
         with open(input_file) as f:
             prompts = [line.strip() for line in f.readlines()]
