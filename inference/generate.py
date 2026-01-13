@@ -9,6 +9,8 @@ from transformers import AutoTokenizer
 from safetensors.torch import load_model
 
 from model import Transformer, ModelArgs
+import sys
+import time
 
 
 def sample(logits, temperature: float = 1.0):
