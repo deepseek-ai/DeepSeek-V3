@@ -578,7 +578,7 @@ class Gate(nn.Module):
             scores = scores.softmax(dim=-1, dtype=torch.float32)
         else:
             scores = scores.sigmoid()
-        original_scores = scores
+        original_scores = scores.clone
         if self.bias is not None:
             scores = scores + self.bias
         if self.n_groups > 1:
