@@ -22,6 +22,8 @@ def act_quant_kernel(x_ptr, y_ptr, s_ptr, BLOCK_SIZE: tl.constexpr, scale_fmt: t
     """
     pid = tl.program_id(axis=0)
     offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    offs = tl.max_contiguous(tl.multiple_of(offs, BLOCK_SIZE), BLOCK_SIZE)
+
     x = tl.load(x_ptr + offs).to(tl.float32)
     amax = tl.max(tl.abs(x)) # reduction
     amax = tl.maximum(amax, 1e-4) # clamp to 1e-4
@@ -78,6 +80,8 @@ def weight_dequant_kernel(x_ptr, s_ptr, y_ptr, M, N, BLOCK_SIZE: tl.constexpr):
     n = tl.cdiv(N, BLOCK_SIZE)
     offs_m = pid_m * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     offs_n = pid_n * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    offs_n = tl.max_contiguous(tl.multiple_of(offs_n, BLOCK_SIZE), BLOCK_SIZE)
+
     offs = offs_m[:, None] * N + offs_n[None, :]
     mask = (offs_m[:, None] < M) & (offs_n[None, :] < N)
     x = tl.load(x_ptr + offs, mask=mask).to(tl.float32)
@@ -111,7 +115,7 @@ def weight_dequant(x: torch.Tensor, s: torch.Tensor, block_size: int = 128) -> t
 
 
 fp8_gemm_configs = [
-    Config({'BLOCK_SIZE_M': block_m, 'BLOCK_SIZE_N': block_n, 'BLOCK_SIZE_K': 128}, num_stages=num_stages, num_warps=8)
+    Config({'BLOCK_SIZE_M': block_m, 'BLOCK_SIZE_N': block_n, 'BLOCK_SIZE_K': 128, 'GROUP_SIZE': 8}, num_stages=num_stages, num_warps=8)
     for block_m in [16, 32, 64] for block_n in [32, 64, 128] for num_stages in [3, 4, 5, 6]
 ]
 
@@ -122,7 +126,8 @@ def fp8_gemm_kernel(a_ptr, b_ptr, c_ptr,
                     M, N: tl.constexpr, K: tl.constexpr,
                     BLOCK_SIZE_M: tl.constexpr,
                     BLOCK_SIZE_N: tl.constexpr,
-                    BLOCK_SIZE_K: tl.constexpr):
+                    BLOCK_SIZE_K: tl.constexpr,
+                    GROUP_SIZE: tl.constexpr):
     """
     Performs a matrix multiplication operation on FP8 matrices with scaling factors.
 
@@ -144,14 +149,19 @@ def fp8_gemm_kernel(a_ptr, b_ptr, c_ptr,
     """
     pid_m = tl.program_id(axis=0)
     pid_n = tl.program_id(axis=1)
+    grid_m = tl.cdiv(M, BLOCK_SIZE_M)
+    grid_n = tl.cdiv(N, BLOCK_SIZE_N)
+    pid_m, pid_n = tl.swizzle2d(pid_m, pid_n, grid_m, grid_n, GROUP_SIZE)
+
     k = tl.cdiv(K, BLOCK_SIZE_K)
-    offs_m = (pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)) % M
-    offs_n = (pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)) % N
+    offs_am = (pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)) % M
+    offs_am = tl.max_contiguous(tl.multiple_of(offs_am, BLOCK_SIZE_M), BLOCK_SIZE_M)
+    offs_bn = (pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)) % N
     offs_k = tl.arange(0, BLOCK_SIZE_K)
-    a_ptrs = a_ptr + offs_m[:, None] * K + offs_k[None, :]
-    b_ptrs = b_ptr + offs_n[None, :] * K + offs_k[:, None]
-    a_s_ptrs = a_s_ptr + offs_m * k
-    b_s_ptrs = b_s_ptr + (offs_n // BLOCK_SIZE_K) * k
+    a_ptrs = a_ptr + offs_am[:, None] * K + offs_k[None, :]
+    b_ptrs = b_ptr + offs_bn[None, :] * K + offs_k[:, None]
+    a_s_ptrs = a_s_ptr + offs_am * k
+    b_s_ptrs = b_s_ptr + (offs_bn // BLOCK_SIZE_K) * k
 
     accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
     for i in range(k):
@@ -165,10 +175,11 @@ def fp8_gemm_kernel(a_ptr, b_ptr, c_ptr,
         a_s_ptrs += 1
         b_s_ptrs += 1
     c = accumulator.to(c_ptr.dtype.element_ty)
-    offs_m = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
-    offs_n = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
-    c_ptrs = c_ptr + offs_m[:, None] * N + offs_n[None, :]
-    mask = (offs_m[:, None] < M) & (offs_n[None, :] < N)
+    offs_cm = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
+    offs_cn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
+    offs_cn = tl.max_contiguous(tl.multiple_of(offs_cn, BLOCK_SIZE_N), BLOCK_SIZE_N)
+    c_ptrs = c_ptr + offs_cm[:, None] * N + offs_cn[None, :]
+    mask = (offs_cm[:, None] < M) & (offs_cn[None, :] < N)
     tl.store(c_ptrs, c, mask=mask)
 
 
