@@ -1,8 +1,14 @@
+
 name: "Mark and close stale issues"
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   stale:
@@ -10,21 +16,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Mark and close stale issues"
-        uses: actions/stale@v9
+        uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e # v9.0.0
         with:
           days-before-issue-stale: 30
           days-before-issue-close: 14
           stale-issue-label: "stale"
           close-issue-label: "closed-as-stale"
+        
           exempt-issue-labels: |
             pinned
             security
+            vulnerability
+            security-advisory
           stale-issue-message: >
             This issue has been automatically marked as stale because it has not had
             recent activity. It will be closed if no further activity occurs. If you
             believe this issue is still relevant, please leave a comment to keep it open.
             Thank you for your contributions!
+            
           close-issue-message: false
           days-before-pr-stale: -1
           days-before-pr-close: -1
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }
+
+          

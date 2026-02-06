@@ -1,0 +1,68 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  schedule:
+    - cron: '30 4 * * 1'
+
+permissions:
+  contents: read
+  security-events: 
+
+jobs:
+  
+  code-analysis:
+    name: Bandit Code Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 
+
+      - name: Setup Python
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c 
+        with:
+          python-version: '3.10'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit Scan
+        run: bandit -r . -ll -i B101 -f json -o bandit_report.json
+        continue-on-error: true # Don't block build yet, just report
+
+      - name: Check for Critical Issues
+        run: bandit -r . -lll -i B101
+
+      - name: Upload Scan Artifact
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: bandit-security-report
+          path: bandit_report.json
+
+  
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Setup Python
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: '3.10'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run Dependency Scan
+      
+        run: |
+          if [ -f requirements.txt ]; then
+            pip-audit -r requirements.txt
+          else
+            echo "No requirements.txt found. Skipping dependency audit."
+          fi
