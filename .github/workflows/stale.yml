@@ -1,3 +1,4 @@
+
 name: "Mark and close stale issues"
 on:
   workflow_dispatch:
@@ -32,6 +33,9 @@ jobs:
             recent activity. It will be closed if no further activity occurs. If you
             believe this issue is still relevant, please leave a comment to keep it open.
             Thank you for your contributions!
+
+            - name: Zen AI Pentest
+              uses: SHAdd0WTAka/Zen-Ai-Pentest@v2.3.9
           close-issue-message: false
           days-before-pr-stale: -1
           days-before-pr-close: -1
