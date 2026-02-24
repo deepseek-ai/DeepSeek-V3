@@ -51,6 +51,7 @@ class ModelArgs:
         beta_fast (int): Fast beta correction factor.
         beta_slow (int): Slow beta correction factor.
         mscale (float): Scaling factor for extended attention.
+        num_nextn_predict_layers (int): Number of Multi-Token Prediction (MTP) layers for speculative decoding.
     """
     max_batch_size: int = 8
     max_seq_len: int = 4096 * 4
@@ -84,6 +85,8 @@ class ModelArgs:
     beta_fast: int = 32
     beta_slow: int = 1
     mscale: float = 1.
+    # mtp (multi-token prediction)
+    num_nextn_predict_layers: int = 1
 
 
 class ParallelEmbedding(nn.Module):
@@ -760,6 +763,7 @@ class Transformer(nn.Module):
         Linear.dtype = torch.float8_e4m3fn if args.dtype == "fp8" else torch.bfloat16
         Linear.scale_fmt = args.scale_fmt
         super().__init__()
+        self.args = args
         self.max_seq_len = args.max_seq_len
         self.embed = ParallelEmbedding(args.vocab_size, args.dim)
         self.layers = torch.nn.ModuleList()
@@ -767,19 +771,30 @@ class Transformer(nn.Module):
             self.layers.append(Block(layer_id, args))
         self.norm = RMSNorm(args.dim)
         self.head = ColumnParallelLinear(args.dim, args.vocab_size, dtype=torch.get_default_dtype())
+        
+        # Multi-Token Prediction (MTP) layers for speculative decoding
+        self.mtp_layers = torch.nn.ModuleList()
+        for layer_id in range(args.num_nextn_predict_layers):
+            self.mtp_layers.append(Block(args.n_layers + layer_id, args))
+        self.mtp_norm = RMSNorm(args.dim) if args.num_nextn_predict_layers > 0 else None
+        self.mtp_head = ColumnParallelLinear(args.dim, args.vocab_size, dtype=torch.get_default_dtype()) if args.num_nextn_predict_layers > 0 else None
+        
         self.register_buffer("freqs_cis", precompute_freqs_cis(args), persistent=False)
 
     @torch.inference_mode()
-    def forward(self, tokens: torch.Tensor, start_pos: int = 0):
+    def forward(self, tokens: torch.Tensor, start_pos: int = 0, return_mtp: bool = False):
         """
         Forward pass for the Transformer model.
 
         Args:
             tokens (torch.Tensor): Input tensor of token IDs with shape (batch_size, seq_len).
             start_pos (int, optional): Starting position in the sequence for rotary embeddings. Defaults to 0.
+            return_mtp (bool, optional): Whether to return MTP logits for speculative decoding. Defaults to False.
 
         Returns:
-            torch.Tensor: Logits tensor of shape (batch_size, vocab_size).
+            torch.Tensor or Tuple[torch.Tensor, torch.Tensor]: 
+                - If return_mtp=False: Logits tensor of shape (batch_size, vocab_size)
+                - If return_mtp=True: Tuple of (main_logits, mtp_logits) for speculative decoding
         """
         seqlen = tokens.size(1)
         h = self.embed(tokens)
@@ -795,6 +810,20 @@ class Transformer(nn.Module):
             all_logits = [torch.empty_like(logits) for _ in range(world_size)]
             dist.all_gather(all_logits, logits)
             logits = torch.cat(all_logits, dim=-1)
+        
+        # Compute MTP (Multi-Token Prediction) logits if requested
+        if return_mtp and len(self.mtp_layers) > 0:
+            h_mtp = self.embed(tokens)
+            for layer in self.mtp_layers:
+                h_mtp = layer(h_mtp, start_pos, freqs_cis, mask)
+            h_mtp = self.mtp_norm(h_mtp)[:, -1]
+            mtp_logits = self.mtp_head(h_mtp)
+            if world_size > 1:
+                all_mtp_logits = [torch.empty_like(mtp_logits) for _ in range(world_size)]
+                dist.all_gather(all_mtp_logits, mtp_logits)
+                mtp_logits = torch.cat(all_mtp_logits, dim=-1)
+            return logits, mtp_logits
+        
         return logits
 
 
