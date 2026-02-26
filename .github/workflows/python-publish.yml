@@ -1,0 +1,84 @@
+            - name: Python Actions Collection
+  uses: microsoft/action-python@0.7.2
+  with:
+    # Project root directory.
+Default '.'
+
+    root: # optional, default is .
+    # pyproject.toml location.
+Default pyproject.toml
+
+    toml: # optional, default is pyproject.toml
+    # Python Version
+Default is '3.7'.
+
+    python_version: # optional, default is 3.7
+    # Run Black
+Default is false.
+
+    black: # optional
+    # Run Bandit
+Default is false.
+
+    bandit: # optional
+    # Run Pylint
+Default is false.
+
+    pylint: # optional
+    # Run Pyright
+Default is false.
+
+    pyright: # optional
+    # Run Flake8
+Default is false.
+
+    flake8: # optional
+    # Run tests with PyTest
+Default is false.
+
+    pytest: # optional
+    # Publish to PyPi
+Default is false
+
+    pypi_publish: # optional
+    # Customize which tests run with Pytest Markers
+
+    args: # optional, default is 
+    # PyPi Target. Use this to point to private or test locations.      
+Default testpypi
+
+    pypi_repo: # optional, default is pypi
+    # Credentials for PyPi
+
+    pypi_password: # optional, default is 
+    # Value to append to version in order to produce unique id for PyPi.
+Examples include: 
+  '-rc {{ github.run_attempt }}'
+  '-dev {{ github.run_attempt }}'
+
+    version_suffix: # optional, default is 
+    # GITHUB_TOKEN
+    github_token: # optional, default is ${{ github.token }}
+    # Working directory relative to the root directory.
+    workdir: # optional, default is src
+    # Test directory
+    testdir: # optional, default is tests
+    # Flags for code coverage
+    coverage: # optional, default is true
+    # Flags for code coverage
+    flags: # optional, default is unittests
+    # Report level for reviewdog [info,warning,error]
+    level: # optional, default is error
+    # Reporter of reviewdog command [github-pr-check,github-pr-review].
+    reporter: # optional, default is github-pr-check
+    # Filtering mode for the reviewdog command [added,diff_context,file,nofilter].
+Default is added.
+
+    filter_mode: # optional, default is added
+    # Exit code for reviewdog when errors are found [true,false]
+Default is `false`.
+
+    fail_on_error: # optional, default is false
+    # Additional reviewdog flags
+    reviewdog_flags: # optional, default is 
+          
