@@ -11,17 +11,29 @@ from safetensors.torch import load_model
 from model import Transformer, ModelArgs
 
 
-def sample(logits, temperature: float = 1.0):
+def sample(logits, temperature: float = 1.0, repetition_penalty: float = 1.0, generated_tokens: torch.Tensor = None):
     """
-    Samples a token from the logits using temperature scaling.
+    Samples a token from the logits using temperature scaling and repetition penalty.
 
     Args:
         logits (torch.Tensor): The logits tensor for token predictions.
         temperature (float, optional): Temperature for scaling logits. Defaults to 1.0.
+        repetition_penalty (float, optional): Penalty factor for tokens already generated.
+            Values > 1.0 discourage repetition, 1.0 means no penalty. Defaults to 1.0.
+        generated_tokens (torch.Tensor, optional): Previously generated token IDs used to
+            apply the repetition penalty. Shape: (batch_size, seq_len). Defaults to None.
 
     Returns:
         torch.Tensor: The sampled token.
     """
+    if repetition_penalty != 1.0 and generated_tokens is not None and generated_tokens.numel() > 0:
+        # Apply repetition penalty (from CTRL paper: https://arxiv.org/abs/1909.05858)
+        # For each token that appeared in generated_tokens, scale down its logit
+        score = torch.gather(logits, -1, generated_tokens)
+        # If score < 0, multiply by penalty (making it more negative = less likely)
+        # If score > 0, divide by penalty (making it less positive = less likely)
+        score = torch.where(score < 0, score * repetition_penalty, score / repetition_penalty)
+        logits = logits.scatter(-1, generated_tokens, score)
     logits = logits / max(temperature, 1e-5)
     probs = torch.softmax(logits, dim=-1)
     return probs.div_(torch.empty_like(probs).exponential_(1)).argmax(dim=-1)
@@ -33,7 +45,8 @@ def generate(
     prompt_tokens: List[List[int]],
     max_new_tokens: int,
     eos_id: int,
-    temperature: float = 1.0
+    temperature: float = 1.0,
+    repetition_penalty: float = 1.0
 ) -> List[List[int]]:
     """
     Generates new tokens based on the given prompt tokens using the specified model.
@@ -44,6 +57,8 @@ def generate(
         max_new_tokens (int): The maximum number of new tokens to generate.
         eos_id (int): The end-of-sequence token ID.
         temperature (float, optional): The temperature value for sampling. Defaults to 1.0.
+        repetition_penalty (float, optional): Penalty factor for repeated tokens.
+            Values > 1.0 discourage repetition. Defaults to 1.0.
 
     Returns:
         List[List[int]]: A list of lists containing the generated tokens for each sequence.
@@ -60,7 +75,9 @@ def generate(
     for cur_pos in range(min(prompt_lens), total_len):
         logits = model.forward(tokens[:, prev_pos:cur_pos], prev_pos)
         if temperature > 0:
-            next_token = sample(logits, temperature)
+            # Collect all tokens generated so far (prompt + generated) for repetition penalty
+            generated_so_far = tokens[:, :cur_pos].clamp(min=0)  # Replace -1 padding with 0
+            next_token = sample(logits, temperature, repetition_penalty, generated_so_far)
         else:
             next_token = logits.argmax(dim=-1)
         next_token = torch.where(prompt_mask[:, cur_pos], tokens[:, cur_pos], next_token)
@@ -85,6 +102,7 @@ def main(
     interactive: bool = True,
     max_new_tokens: int = 100,
     temperature: float = 1.0,
+    repetition_penalty: float = 1.0,
 ) -> None:
     """
     Main function to load the model and perform interactive or batch text generation.
@@ -96,6 +114,7 @@ def main(
         interactive (bool, optional): Whether to run in interactive mode. Defaults to True.
         max_new_tokens (int, optional): Maximum number of new tokens to generate. Defaults to 100.
         temperature (float, optional): Temperature for sampling. Defaults to 1.0.
+        repetition_penalty (float, optional): Penalty for repeated tokens. Defaults to 1.0.
     """
     world_size = int(os.getenv("WORLD_SIZE", "1"))
     rank = int(os.getenv("RANK", "0"))
@@ -138,7 +157,7 @@ def main(
                 continue
             messages.append({"role": "user", "content": prompt})
             prompt_tokens = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
-            completion_tokens = generate(model, [prompt_tokens], max_new_tokens, tokenizer.eos_token_id, temperature)
+            completion_tokens = generate(model, [prompt_tokens], max_new_tokens, tokenizer.eos_token_id, temperature, repetition_penalty)
             completion = tokenizer.decode(completion_tokens[0], skip_special_tokens=True)
             print(completion)
             messages.append({"role": "assistant", "content": completion})
@@ -147,7 +166,7 @@ def main(
             prompts = [line.strip() for line in f.readlines()]
         assert len(prompts) <= args.max_batch_size, f"Number of prompts exceeds maximum batch size ({args.max_batch_size})"
         prompt_tokens = [tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True) for prompt in prompts]
-        completion_tokens = generate(model, prompt_tokens, max_new_tokens, tokenizer.eos_token_id, temperature)
+        completion_tokens = generate(model, prompt_tokens, max_new_tokens, tokenizer.eos_token_id, temperature, repetition_penalty)
         completions = tokenizer.batch_decode(completion_tokens, skip_special_tokens=True)
         for prompt, completion in zip(prompts, completions):
             print("Prompt:", prompt)
@@ -180,6 +199,8 @@ if __name__ == "__main__":
     parser.add_argument("--interactive", action="store_true")
     parser.add_argument("--max-new-tokens", type=int, default=200)
     parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument("--repetition-penalty", type=float, default=1.0,
+                        help="Penalty for repeated tokens. Values > 1.0 discourage repetition. Default: 1.0")
     args = parser.parse_args()
     assert args.input_file or args.interactive, "Either input-file or interactive mode must be specified"
-    main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature)
+    main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature, args.repetition_penalty)
