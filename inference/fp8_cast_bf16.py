@@ -1,6 +1,7 @@
 import os
 import json
 from argparse import ArgumentParser
+from collections import OrderedDict
 from glob import glob
 from tqdm import tqdm
 
@@ -36,8 +37,8 @@ def main(fp8_path, bf16_path):
         model_index = json.load(f)
     weight_map = model_index["weight_map"]
     
-    # Cache for loaded safetensor files
-    loaded_files = {}
+    # Cache for loaded safetensor files (OrderedDict for LRU eviction)
+    loaded_files = OrderedDict()
     fp8_weight_names = []
 
     # Helper function to get tensor from the correct file
@@ -58,6 +59,9 @@ def main(fp8_path, bf16_path):
         if file_name not in loaded_files:
             file_path = os.path.join(fp8_path, file_name)
             loaded_files[file_name] = load_file(file_path, device="cuda")
+        else:
+            # Mark as recently used for LRU eviction
+            loaded_files.move_to_end(file_name)
         return loaded_files[file_name][tensor_name]
 
     safetensor_files = list(glob(os.path.join(fp8_path, "*.safetensors")))
@@ -66,6 +70,7 @@ def main(fp8_path, bf16_path):
         file_name = os.path.basename(safetensor_file)
         current_state_dict = load_file(safetensor_file, device="cuda")
         loaded_files[file_name] = current_state_dict
+        loaded_files.move_to_end(file_name)
         
         new_state_dict = {}
         for weight_name, weight in current_state_dict.items():
@@ -87,10 +92,10 @@ def main(fp8_path, bf16_path):
         new_safetensor_file = os.path.join(bf16_path, file_name)
         save_file(new_state_dict, new_safetensor_file)
         
-        # Memory management: keep only the 2 most recently used files
-        if len(loaded_files) > 2:
-            oldest_file = next(iter(loaded_files))
-            del loaded_files[oldest_file]
+        # Memory management: evict least recently used files, keep at most 2
+        while len(loaded_files) > 2:
+            # Evict the least recently used entry (first item in OrderedDict)
+            loaded_files.popitem(last=False)
             torch.cuda.empty_cache()
     
     # Update model index
