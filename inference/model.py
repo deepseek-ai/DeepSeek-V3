@@ -7,7 +7,14 @@ from torch import nn
 import torch.nn.functional as F
 import torch.distributed as dist
 
-from kernel import act_quant, weight_dequant, fp8_gemm
+try:
+    from kernel import act_quant, weight_dequant, fp8_gemm
+    KERNEL_IMPORT_ERROR = None
+except Exception as exc:  # pragma: no cover - exercised only on non-Triton setups
+    act_quant = weight_dequant = fp8_gemm = None
+    KERNEL_IMPORT_ERROR = exc
+
+from dim_gate import HiddenDimensionGate
 
 
 world_size = 1
@@ -54,7 +61,7 @@ class ModelArgs:
     """
     max_batch_size: int = 8
     max_seq_len: int = 4096 * 4
-    dtype: Literal["bf16", "fp8"] = "bf16"
+    dtype: Literal["bf16", "fp8", "fp32"] = "bf16"
     scale_fmt: Optional[str] = None
     vocab_size: int = 102400
     dim: int = 2048
@@ -71,12 +78,32 @@ class ModelArgs:
     n_limited_groups: int = 1
     score_func: Literal["softmax", "sigmoid"] = "softmax"
     route_scale: float = 1.
+    moe_gate_bias: Optional[bool] = None
     # mla
+    attn_impl: Literal["naive", "absorb"] = "absorb"
     q_lora_rank: int = 0
     kv_lora_rank: int = 512
     qk_nope_head_dim: int = 128
     qk_rope_head_dim: int = 64
     v_head_dim: int = 128
+    # hidden-dimension gate
+    use_dim_gate: bool = False
+    gate_frac: float = 1.0
+    gate_softness: float = 0.25
+    gate_leak: float = 0.0
+    gate_threshold: float = 0.25
+    context_leak: float = 0.8
+    context_scale: float = 0.8
+    gate_stdp_lr: float = 0.05
+    gate_weight_decay: float = 0.001
+    gate_w_min: float = 0.2
+    gate_w_max: float = 2.0
+    gate_target_rate: float = 0.1
+    gate_threshold_lr: float = 0.02
+    gate_trace_decay: float = 0.9
+    gate_active_bonus: float = 0.5
+    gate_negative_reward_scale: float = 1.5
+    gate_reward_ema_decay: float = 0.95
     # yarn
     original_seq_len: int = 4096
     rope_theta: float = 10000.0
@@ -153,9 +180,13 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
     if weight.element_size() > 1:
         return F.linear(x, weight, bias)
     elif gemm_impl == "bf16":
+        if weight_dequant is None:
+            raise RuntimeError("Triton kernels are unavailable for quantized weights") from KERNEL_IMPORT_ERROR
         weight = weight_dequant(weight, weight.scale)
         return F.linear(x, weight, bias)
     else:
+        if act_quant is None or fp8_gemm is None:
+            raise RuntimeError("Triton kernels are unavailable for fp8 GEMM") from KERNEL_IMPORT_ERROR
         x, scale = act_quant(x, block_size, scale_fmt)
         y = fp8_gemm(x, scale, weight, weight.scale)
         if bias is not None:
@@ -414,6 +445,7 @@ class MLA(nn.Module):
         self.dim = args.dim
         self.n_heads = args.n_heads
         self.n_local_heads = args.n_heads // world_size
+        self.attn_impl = args.attn_impl
         self.q_lora_rank = args.q_lora_rank
         self.kv_lora_rank = args.kv_lora_rank
         self.qk_nope_head_dim = args.qk_nope_head_dim
@@ -436,7 +468,7 @@ class MLA(nn.Module):
             mscale = 0.1 * args.mscale * math.log(args.rope_factor) + 1.0
             self.softmax_scale = self.softmax_scale * mscale * mscale
 
-        if attn_impl == "naive":
+        if self.attn_impl == "naive":
             self.register_buffer("k_cache", torch.zeros(args.max_batch_size, args.max_seq_len, self.n_local_heads, self.qk_head_dim), persistent=False)
             self.register_buffer("v_cache", torch.zeros(args.max_batch_size, args.max_seq_len, self.n_local_heads, self.v_head_dim), persistent=False)
         else:
@@ -468,7 +500,7 @@ class MLA(nn.Module):
         kv = self.wkv_a(x)
         kv, k_pe = torch.split(kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1)
         k_pe = apply_rotary_emb(k_pe.unsqueeze(2), freqs_cis)
-        if attn_impl == "naive":
+        if self.attn_impl == "naive":
             q = torch.cat([q_nope, q_pe], dim=-1)
             kv = self.wkv_b(self.kv_norm(kv))
             kv = kv.view(bsz, seqlen, self.n_local_heads, self.qk_nope_head_dim + self.v_head_dim)
@@ -478,6 +510,8 @@ class MLA(nn.Module):
             self.v_cache[:bsz, start_pos:end_pos] = v
             scores = torch.einsum("bshd,bthd->bsht", q, self.k_cache[:bsz, :end_pos]) * self.softmax_scale
         else:
+            if self.wkv_b.scale is not None and weight_dequant is None:
+                raise RuntimeError("Triton kernels are unavailable for quantized MLA weights") from KERNEL_IMPORT_ERROR
             wkv_b = self.wkv_b.weight if self.wkv_b.scale is None else weight_dequant(self.wkv_b.weight, self.wkv_b.scale, block_size) 
             wkv_b = wkv_b.view(self.n_local_heads, -1, self.kv_lora_rank)
             q_nope = torch.einsum("bshd,hdc->bshc", q_nope, wkv_b[:, :self.qk_nope_head_dim])
@@ -488,7 +522,7 @@ class MLA(nn.Module):
         if mask is not None:
             scores += mask.unsqueeze(1)
         scores = scores.softmax(dim=-1, dtype=torch.float32).type_as(x)
-        if attn_impl == "naive":
+        if self.attn_impl == "naive":
             x = torch.einsum("bsht,bthd->bshd", scores, self.v_cache[:bsz, :end_pos])
         else:
             x = torch.einsum("bsht,btc->bshc", scores, self.kv_cache[:bsz, :end_pos])
@@ -561,7 +595,8 @@ class Gate(nn.Module):
         self.score_func = args.score_func
         self.route_scale = args.route_scale
         self.weight = nn.Parameter(torch.empty(args.n_routed_experts, args.dim))
-        self.bias = nn.Parameter(torch.empty(args.n_routed_experts, dtype=torch.float32)) if self.dim == 7168 else None
+        bias_enabled = self.dim == 7168 if args.moe_gate_bias is None else args.moe_gate_bias
+        self.bias = nn.Parameter(torch.empty(args.n_routed_experts, dtype=torch.float32)) if bias_enabled else None
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -716,6 +751,7 @@ class Block(nn.Module):
         self.ffn = MLP(args.dim, args.inter_dim) if layer_id < args.n_dense_layers else MoE(args)
         self.attn_norm = RMSNorm(args.dim)
         self.ffn_norm = RMSNorm(args.dim)
+        self.dim_gate = HiddenDimensionGate(args) if args.use_dim_gate else None
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
         """
@@ -730,7 +766,10 @@ class Block(nn.Module):
         Returns:
             torch.Tensor: Output tensor after block computation.
         """
-        x = x + self.attn(self.attn_norm(x), start_pos, freqs_cis, mask)
+        attn_input = self.attn_norm(x)
+        if self.dim_gate is not None:
+            attn_input = self.dim_gate(attn_input, start_pos)
+        x = x + self.attn(attn_input, start_pos, freqs_cis, mask)
         x = x + self.ffn(self.ffn_norm(x))
         return x
 
@@ -757,7 +796,12 @@ class Transformer(nn.Module):
         global world_size, rank
         world_size = dist.get_world_size() if dist.is_initialized() else 1
         rank = dist.get_rank() if dist.is_initialized() else 0
-        Linear.dtype = torch.float8_e4m3fn if args.dtype == "fp8" else torch.bfloat16
+        if args.dtype == "fp8":
+            Linear.dtype = torch.float8_e4m3fn
+        elif args.dtype == "fp32":
+            Linear.dtype = torch.float32
+        else:
+            Linear.dtype = torch.bfloat16
         Linear.scale_fmt = args.scale_fmt
         super().__init__()
         self.max_seq_len = args.max_seq_len
@@ -799,8 +843,9 @@ class Transformer(nn.Module):
 
 
 if __name__ == "__main__":
-    torch.set_default_dtype(torch.bfloat16)
-    torch.set_default_device("cuda")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    torch.set_default_dtype(torch.float32 if device == "cpu" else torch.bfloat16)
+    torch.set_default_device(device)
     torch.manual_seed(0)
     args = ModelArgs()
     x = torch.randint(0, args.vocab_size, (2, 128))

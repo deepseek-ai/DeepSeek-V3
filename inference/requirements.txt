@@ -1,4 +1,5 @@
 torch==2.4.1
-triton==3.0.0
+# Triton is only needed for the CUDA kernel path.
+triton==3.0.0; platform_system == "Linux"
 transformers==4.46.3
 safetensors==0.4.5
