@@ -102,7 +102,7 @@ To ensure optimal performance and flexibility, we have partnered with open-sourc
 
 For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md](./README_WEIGHTS.md) for details on the Main Model weights and the Multi-Token Prediction (MTP) Modules. Please note that MTP support is currently under active development within the community, and we welcome your contributions and feedback.
 
-For the toy-size Apple Silicon port and hidden-dimension gate notes added in this fork, see [README_DIM_GATE.md](./README_DIM_GATE.md).
+For the toy-size Apple Silicon port, hidden-dimension gate, native MPS gate scan, and fused sparse-projection notes added in this fork, see [README_DIM_GATE.md](./README_DIM_GATE.md).
 
 ## 4. Evaluation Results
 ### Base Model

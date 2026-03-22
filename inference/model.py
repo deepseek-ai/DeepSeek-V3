@@ -14,7 +14,12 @@ except Exception as exc:  # pragma: no cover - exercised only on non-Triton setu
     act_quant = weight_dequant = fp8_gemm = None
     KERNEL_IMPORT_ERROR = exc
 
-from dim_gate import HiddenDimensionGate
+try:
+    from dim_gate import HiddenDimensionGate, HiddenGateOutput
+    from sparse_mla import sparse_project_hidden_pair
+except ModuleNotFoundError:  # pragma: no cover - package import path
+    from .dim_gate import HiddenDimensionGate, HiddenGateOutput
+    from .sparse_mla import sparse_project_hidden_pair
 
 
 world_size = 1
@@ -22,6 +27,40 @@ rank = 0
 block_size = 128
 gemm_impl: Literal["bf16", "fp8"] = "bf16"
 attn_impl: Literal["naive", "absorb"] = "absorb"
+
+_FLOAT8_DTYPES = tuple(
+    dtype
+    for dtype in (
+        getattr(torch, "float8_e4m3fn", None),
+        getattr(torch, "float8_e5m2", None),
+    )
+    if dtype is not None
+)
+
+
+def _init_normal_(tensor: torch.Tensor, mean: float = 0.0, std: float = 0.02) -> None:
+    with torch.no_grad():
+        if tensor.dtype in _FLOAT8_DTYPES:
+            tmp = torch.empty(tensor.shape, dtype=torch.float32, device=tensor.device)
+            nn.init.normal_(tmp, mean=mean, std=std)
+            tensor.copy_(tmp.to(dtype=tensor.dtype))
+        else:
+            nn.init.normal_(tensor, mean=mean, std=std)
+
+
+def _fill_(tensor: torch.Tensor, value: float) -> None:
+    with torch.no_grad():
+        if tensor.dtype in _FLOAT8_DTYPES:
+            tmp = torch.full(tensor.shape, value, dtype=torch.float32, device=tensor.device)
+            tensor.copy_(tmp.to(dtype=tensor.dtype))
+        else:
+            tensor.fill_(value)
+
+
+def _reset_module_parameters(module: nn.Module) -> None:
+    reset_parameters = getattr(module, "reset_parameters", None)
+    if callable(reset_parameters):
+        reset_parameters()
 
 @dataclass
 class ModelArgs:
@@ -90,6 +129,13 @@ class ModelArgs:
     use_dim_gate: bool = False
     gate_frac: float = 1.0
     gate_softness: float = 0.25
+    gate_shared_basis: bool = False
+    gate_basis_window: int = 0
+    gate_force_zero: bool = False
+    gate_sort_indices: bool = False
+    gate_native_scan: bool = True
+    use_sparse_projection: bool = False
+    return_gate_metadata: bool = False
     gate_leak: float = 0.0
     gate_threshold: float = 0.25
     context_leak: float = 0.8
@@ -104,6 +150,18 @@ class ModelArgs:
     gate_active_bonus: float = 0.5
     gate_negative_reward_scale: float = 1.5
     gate_reward_ema_decay: float = 0.95
+    gate_freeze_step: int = 0
+    center_gate_reward: bool = False
+    batch_selector_steps: int = 0
+    ranked_batch_selector: bool = False
+    selector_schedule: Literal["constant", "step", "linear"] = "constant"
+    selector_schedule_step: int = 0
+    selector_schedule_start: int = 0
+    selector_schedule_end: int = 0
+    selector_schedule_scale: float = 1.0
+    selector_update_cutoff: float = 0.4
+    selector_soft_lr: bool = False
+    selector_soft_lr_power: float = 1.0
     # yarn
     original_seq_len: int = 4096
     rope_theta: float = 10000.0
@@ -130,6 +188,10 @@ class ParallelEmbedding(nn.Module):
         self.vocab_start_idx = rank * self.part_vocab_size
         self.vocab_end_idx = self.vocab_start_idx + self.part_vocab_size
         self.weight = nn.Parameter(torch.empty(self.part_vocab_size, self.dim))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        _init_normal_(self.weight)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -222,6 +284,14 @@ class Linear(nn.Module):
             self.bias = nn.Parameter(torch.empty(out_features))
         else:
             self.register_parameter("bias", None)
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        _init_normal_(self.weight)
+        if self.scale is not None:
+            _fill_(self.scale, 1.0)
+        if self.bias is not None:
+            _fill_(self.bias, 0.0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -424,6 +494,19 @@ def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
     return y.to(dtype)
 
 
+def build_causal_mask(seqlen: int, device: torch.device) -> Optional[torch.Tensor]:
+    """
+    Builds a causal attention mask.
+
+    MPS produces NaNs when `triu_` is applied to an `-inf`-filled tensor, so we
+    use a large finite negative sentinel there instead.
+    """
+    if seqlen <= 1:
+        return None
+    neg = -1e4 if device.type == "mps" else float("-inf")
+    return torch.full((seqlen, seqlen), neg, device=device, dtype=torch.float32).triu_(1)
+
+
 class MLA(nn.Module):
     """
     Multi-Head Latent Attention (MLA) Layer.
@@ -452,6 +535,7 @@ class MLA(nn.Module):
         self.qk_rope_head_dim = args.qk_rope_head_dim
         self.qk_head_dim = args.qk_nope_head_dim + args.qk_rope_head_dim
         self.v_head_dim = args.v_head_dim
+        self.use_sparse_projection = bool(getattr(args, "use_sparse_projection", False))
 
         if self.q_lora_rank == 0:
             self.wq = ColumnParallelLinear(self.dim, self.n_heads * self.qk_head_dim)
@@ -475,7 +559,14 @@ class MLA(nn.Module):
             self.register_buffer("kv_cache", torch.zeros(args.max_batch_size, args.max_seq_len, self.kv_lora_rank), persistent=False)
             self.register_buffer("pe_cache", torch.zeros(args.max_batch_size, args.max_seq_len, self.qk_rope_head_dim), persistent=False)
 
-    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]):
+    def forward(
+        self,
+        x: torch.Tensor,
+        start_pos: int,
+        freqs_cis: torch.Tensor,
+        mask: Optional[torch.Tensor],
+        gate_metadata: Optional[HiddenGateOutput] = None,
+    ):
         """
         Forward pass for the Multi-Head Latent Attention (MLA) Layer.
 
@@ -490,14 +581,27 @@ class MLA(nn.Module):
         """
         bsz, seqlen, _ = x.size()
         end_pos = start_pos + seqlen
+        use_persistent_cache = not torch.is_grad_enabled() or start_pos > 0
         if self.q_lora_rank == 0:
-            q = self.wq(x)
+            if self.use_sparse_projection and gate_metadata is not None:
+                # Sparse projection is the only attention-side optimization stage enabled today.
+                # The rest of MLA remains numerically identical to the dense path.
+                q, kv = sparse_project_hidden_pair(x, gate_metadata, self.wq, self.wkv_a)
+            else:
+                q = self.wq(x)
+                kv = self.wkv_a(x)
         else:
-            q = self.wq_b(self.q_norm(self.wq_a(x)))
+            if self.use_sparse_projection and gate_metadata is not None:
+                # In the low-rank branch we only sparsify the hidden -> low-rank projection.
+                # `q_norm` and `wq_b` still run dense on the compacted low-rank state.
+                q_low_rank, kv = sparse_project_hidden_pair(x, gate_metadata, self.wq_a, self.wkv_a)
+            else:
+                q_low_rank = self.wq_a(x)
+                kv = self.wkv_a(x)
+            q = self.wq_b(self.q_norm(q_low_rank))
         q = q.view(bsz, seqlen, self.n_local_heads, self.qk_head_dim)
         q_nope, q_pe = torch.split(q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1)
         q_pe = apply_rotary_emb(q_pe, freqs_cis)
-        kv = self.wkv_a(x)
         kv, k_pe = torch.split(kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1)
         k_pe = apply_rotary_emb(k_pe.unsqueeze(2), freqs_cis)
         if self.attn_impl == "naive":
@@ -506,26 +610,40 @@ class MLA(nn.Module):
             kv = kv.view(bsz, seqlen, self.n_local_heads, self.qk_nope_head_dim + self.v_head_dim)
             k_nope, v = torch.split(kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)
             k = torch.cat([k_nope, k_pe.expand(-1, -1, self.n_local_heads, -1)], dim=-1)
-            self.k_cache[:bsz, start_pos:end_pos] = k
-            self.v_cache[:bsz, start_pos:end_pos] = v
-            scores = torch.einsum("bshd,bthd->bsht", q, self.k_cache[:bsz, :end_pos]) * self.softmax_scale
+            if use_persistent_cache:
+                self.k_cache[:bsz, start_pos:end_pos] = k
+                self.v_cache[:bsz, start_pos:end_pos] = v
+                k_source = self.k_cache[:bsz, :end_pos]
+                v_source = self.v_cache[:bsz, :end_pos]
+            else:
+                k_source = k
+                v_source = v
+            scores = torch.einsum("bshd,bthd->bsht", q, k_source) * self.softmax_scale
         else:
             if self.wkv_b.scale is not None and weight_dequant is None:
                 raise RuntimeError("Triton kernels are unavailable for quantized MLA weights") from KERNEL_IMPORT_ERROR
             wkv_b = self.wkv_b.weight if self.wkv_b.scale is None else weight_dequant(self.wkv_b.weight, self.wkv_b.scale, block_size) 
             wkv_b = wkv_b.view(self.n_local_heads, -1, self.kv_lora_rank)
             q_nope = torch.einsum("bshd,hdc->bshc", q_nope, wkv_b[:, :self.qk_nope_head_dim])
-            self.kv_cache[:bsz, start_pos:end_pos] = self.kv_norm(kv)
-            self.pe_cache[:bsz, start_pos:end_pos] = k_pe.squeeze(2)
-            scores = (torch.einsum("bshc,btc->bsht", q_nope, self.kv_cache[:bsz, :end_pos]) +
-                      torch.einsum("bshr,btr->bsht", q_pe, self.pe_cache[:bsz, :end_pos])) * self.softmax_scale
+            kv_normed = self.kv_norm(kv)
+            pe = k_pe.squeeze(2)
+            if use_persistent_cache:
+                self.kv_cache[:bsz, start_pos:end_pos] = kv_normed
+                self.pe_cache[:bsz, start_pos:end_pos] = pe
+                kv_source = self.kv_cache[:bsz, :end_pos]
+                pe_source = self.pe_cache[:bsz, :end_pos]
+            else:
+                kv_source = kv_normed
+                pe_source = pe
+            scores = (torch.einsum("bshc,btc->bsht", q_nope, kv_source) +
+                      torch.einsum("bshr,btr->bsht", q_pe, pe_source)) * self.softmax_scale
         if mask is not None:
             scores += mask.unsqueeze(1)
         scores = scores.softmax(dim=-1, dtype=torch.float32).type_as(x)
         if self.attn_impl == "naive":
-            x = torch.einsum("bsht,bthd->bshd", scores, self.v_cache[:bsz, :end_pos])
+            x = torch.einsum("bsht,bthd->bshd", scores, v_source)
         else:
-            x = torch.einsum("bsht,btc->bshc", scores, self.kv_cache[:bsz, :end_pos])
+            x = torch.einsum("bsht,btc->bshc", scores, kv_source)
             x = torch.einsum("bshc,hdc->bshd", x, wkv_b[:, -self.v_head_dim:])
         x = self.wo(x.flatten(2))
         return x
@@ -597,6 +715,12 @@ class Gate(nn.Module):
         self.weight = nn.Parameter(torch.empty(args.n_routed_experts, args.dim))
         bias_enabled = self.dim == 7168 if args.moe_gate_bias is None else args.moe_gate_bias
         self.bias = nn.Parameter(torch.empty(args.n_routed_experts, dtype=torch.float32)) if bias_enabled else None
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        _init_normal_(self.weight)
+        if self.bias is not None:
+            _fill_(self.bias, 0.0)
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -752,6 +876,7 @@ class Block(nn.Module):
         self.attn_norm = RMSNorm(args.dim)
         self.ffn_norm = RMSNorm(args.dim)
         self.dim_gate = HiddenDimensionGate(args) if args.use_dim_gate else None
+        self.return_gate_metadata = bool(getattr(args, "return_gate_metadata", False))
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
         """
@@ -767,9 +892,12 @@ class Block(nn.Module):
             torch.Tensor: Output tensor after block computation.
         """
         attn_input = self.attn_norm(x)
+        gate_metadata = None
         if self.dim_gate is not None:
             attn_input = self.dim_gate(attn_input, start_pos)
-        x = x + self.attn(attn_input, start_pos, freqs_cis, mask)
+            if self.return_gate_metadata:
+                gate_metadata = self.dim_gate.last_output
+        x = x + self.attn(attn_input, start_pos, freqs_cis, mask, gate_metadata=gate_metadata)
         x = x + self.ffn(self.ffn_norm(x))
         return x
 
@@ -812,6 +940,7 @@ class Transformer(nn.Module):
         self.norm = RMSNorm(args.dim)
         self.head = ColumnParallelLinear(args.dim, args.vocab_size, dtype=torch.get_default_dtype())
         self.register_buffer("freqs_cis", precompute_freqs_cis(args), persistent=False)
+        self.apply(_reset_module_parameters)
 
     @torch.inference_mode()
     def forward(self, tokens: torch.Tensor, start_pos: int = 0):
@@ -828,9 +957,7 @@ class Transformer(nn.Module):
         seqlen = tokens.size(1)
         h = self.embed(tokens)
         freqs_cis = self.freqs_cis[start_pos:start_pos+seqlen]
-        mask = None
-        if seqlen > 1:
-            mask = torch.full((seqlen, seqlen), float("-inf"), device=tokens.device).triu_(1)
+        mask = build_causal_mask(seqlen, tokens.device)
         for layer in self.layers:
             h = layer(h, start_pos, freqs_cis, mask)
         h = self.norm(h)[:, -1]

@@ -1,256 +1,352 @@
 # Dimension Gate Notes
 
-This document explains the first round of changes made to this DeepSeek-V3 repo, why those changes were made, and how the hidden-dimension gate currently works.
+This document explains what changed in this DeepSeek-V3 fork, how the hidden-dimension gate works now, and what the current Apple Silicon execution path actually does.
 
-The goal of this round was not to make full DeepSeek-V3 run on a Mac mini. That is not realistic. The goal was to turn the repo into a usable architecture donor for local experiments by:
+The goal of this fork is not to run full DeepSeek-V3 on a Mac mini. The goal is to turn the repo into a usable architecture donor for local experiments by:
 
 - shrinking the model to a toy configuration
-- inserting the exact hidden-dimension gate logic from the Kanae-Kocho prototype
+- inserting the Kanae-Kocho hidden-dimension gate at the correct transformer location
 - making the toy path run on Apple Silicon through PyTorch MPS
+- porting the selector-learning logic
+- adding native MPS fast paths where Python overhead became the bottleneck
 
-## First-Round Changes
+## Current State
 
-The first round touched these files:
+The fork now has three attention-input execution modes:
+
+1. Dense baseline
+   - no dimension gate
+   - standard DeepSeek MLA
+2. Gated dense
+   - hidden-dimension gate masks the normalized hidden state
+   - MLA still uses dense projections
+3. Gated sparse projection
+   - hidden-dimension gate emits structured metadata
+   - MLA uses that metadata to sparsify the `wq`/`wq_a` and `wkv_a` projections
+   - the rest of attention stays dense
+
+That means the repo is past the original “dense mask only” stage. It now has real projection-side sparsity with a native MPS backend, but it does not yet have sparse MLA latent-state math or sparse KV cache compaction.
+
+## Files Added Or Changed
+
+The current fork centers on these files:
 
 - `inference/model.py`
-- `inference/generate.py`
-- `inference/requirements.txt`
 - `inference/dim_gate.py`
+- `inference/gate_native.py`
+- `inference/sparse_mla.py`
+- `inference/mla_native.py`
+- `inference/native/gate_scan_mps.mm`
+- `inference/native/sparse_projection_mps.mm`
+- `inference/train_gate_compare.py`
+- `inference/sweep_gate_lr.py`
+- `inference/sweep_seed_compare.py`
+- `inference/bench_sparse_projection.py`
 - `inference/toy_run.py`
 - `inference/configs/config_toy_gate.json`
+- `inference/requirements.txt`
 
-What changed in each file:
+What each one is responsible for:
 
 ### `inference/model.py`
 
-- Added optional import handling for Triton kernels so the repo can be imported on systems that do not support Triton.
-- Extended `ModelArgs` with:
-  - Apple-Silicon-friendly `fp32` mode
-  - explicit `attn_impl` selection
-  - a `moe_gate_bias` override
-  - hidden-dimension gate hyperparameters
-- Changed `MLA` to read `args.attn_impl` instead of only relying on the old global.
-- Added clearer runtime errors if a quantized path is requested without Triton.
-- Added `HiddenDimensionGate` to `Block`.
-- Inserted the gate at the attention path only:
+- Adds gate-related flags to `ModelArgs`
+- Inserts the gate at the attention input:
   - `attn_input = attn_norm(x)`
   - `attn_input = dim_gate(attn_input, start_pos)`
-  - `x = x + attn(attn_input, ...)`
-- Added `fp32` dtype handling for small-device experiments.
-- Made the file-level smoke path stop assuming CUDA is always present.
+  - `x = x + attn(attn_input, ..., gate_metadata=...)`
+- Threads structured gate metadata from the block into MLA
+- Uses sparse projection only at the projection boundary:
+  - `wq` and `wkv_a` when `q_lora_rank == 0`
+  - `wq_a` and `wkv_a` when `q_lora_rank > 0`
 
 ### `inference/dim_gate.py`
 
-- New file.
-- Contains the port of the Kanae-Kocho hidden-dimension selector and clamp logic.
-- Implements:
-  - `HiddenGateStats`
-  - `gate_bounds`
-  - `PlasticContextSpiker`
-  - `HiddenDimensionGate`
+- Holds the Python port of the Kanae-Kocho selector
+- Exposes:
+  - `selection_mask`
+  - `active_indices`
+  - `active_counts`
+- Caches MPS-ready `int32` metadata for the native sparse path
+- Contains both the selector dynamics and the gate-side learning hooks
 
-### `inference/generate.py`
+### `inference/gate_native.py`
 
-- Added device selection that supports:
-  - `cuda`
-  - `mps`
-  - `cpu`
-- Removed hard-coded CUDA tensor allocations in the generation loop.
-- Added default dtype selection so non-CUDA runs fall back to `fp32`.
+- Loads the MPS extension for the native gate scan
+- Keeps the recurrent selector scan off the Python hot path on Apple Silicon
 
-### `inference/toy_run.py`
+### `inference/sparse_mla.py`
 
-- New file.
-- Provides a small smoke-test runner for the toy model without needing official weights.
-- Runs:
-  - a prompt forward pass
-  - one incremental decode step
-  - per-layer gate-stat reporting
+- Isolates projection-side sparsity logic from MLA math
+- Dispatches between:
+  - masked dense fallback
+  - padded compact sparse projection
+  - native MPS sparse projection
+  - fused native MPS sparse projection pair
 
-### `inference/configs/config_toy_gate.json`
+### `inference/mla_native.py`
 
-- New toy config intended for local architecture experiments.
-- Keeps the model dense by setting `n_dense_layers == n_layers`.
-- Enables the hidden-dimension gate.
-- Uses `fp32` so the path is safe on Apple Silicon.
+- Loads the native MPS sparse-projection extension
+- Exposes single and fused projection calls
+- Uses native forward plus exact dense backward formulas in PyTorch
 
-### `inference/requirements.txt`
+### `inference/native/gate_scan_mps.mm`
 
-- Triton is now marked Linux-only.
-- This keeps `pip install -r inference/requirements.txt` workable on macOS.
+- Metal-backed recurrent gate scan
+- Replaces the worst Python token loop in the selector hot path
+
+### `inference/native/sparse_projection_mps.mm`
+
+- Metal-backed sparse projection kernels
+- Includes:
+  - single projection kernels
+  - fused pair projection kernels
+  - shared-memory and pointwise variants
+
+### Training / benchmark helpers
+
+- `inference/train_gate_compare.py`
+  - toy compare harness
+  - batch selector accumulator
+  - base vs gated evaluation
+- `inference/sweep_gate_lr.py`
+  - gate LR sweeps
+- `inference/sweep_seed_compare.py`
+  - multi-seed regression sweeps
+- `inference/bench_sparse_projection.py`
+  - projection-only microbenchmarks
+- `inference/toy_run.py`
+  - smoke runner for prompt, decode, and gate stats
 
 ## Exact Insertion Point
 
-The gate is inserted at the same conceptual point used in the Rust prototype:
+The gate is still inserted at the same conceptual point as Kanae-Kocho:
 
 - after RMSNorm
 - before attention projections
 
 In this repo that means:
 
-1. `x` enters a `Block`
-2. `attn_norm(x)` is computed
-3. the hidden-dimension gate masks that normalized hidden state
-4. the masked tensor is sent into MLA
-5. the attention output is added back through the residual path
+1. `Block.forward()` computes `attn_norm(x)`
+2. `HiddenDimensionGate` selects active hidden channels
+3. MLA receives:
+   - the masked activation tensor
+   - optional gate metadata
+4. MLA decides whether to use dense or sparse projection
 
-This is important because the gate is deciding which hidden channels are allowed to influence:
+This is important because the selector is operating on the hidden state that feeds:
 
 - `wq`
+- `wq_a`
 - `wkv_a`
-- downstream attention behavior
 
-It is not replacing the MoE expert gate. The existing `Gate` class in this repo still gates experts. The new dimension gate controls hidden channels.
+It is not replacing the MoE expert gate.
 
-## What "Exact Gate Logic" Means Here
+## How The Gate Works
 
-The current implementation preserves the selector dynamics that mattered in the original prototype.
+The selector keeps the same core state as the Kanae-Kocho prototype:
 
-### Per-dimension state
-
-For each batch element and hidden dimension, the selector keeps:
-
-- `u`: membrane state
-- `context`: exponentially decayed running context
+- `u`: membrane
+- `context`: running context
 - `trace`: eligibility trace
-- `threshold`: adaptive firing threshold
+- `threshold`: adaptive threshold
 - `weights`: learned per-dimension gain
 
-The inference port keeps these states because they are part of the mechanism, not just training scaffolding.
+For each token, the selector:
 
-### Step update
-
-For each token position, the selector does:
-
-1. Update running context:
+1. Updates the context
    - `context = context_leak * context + (1 - context_leak) * x`
-2. Form a context-augmented hidden signal:
+2. Builds a context-augmented signal
    - `combined = x + context_scale * context`
-3. Apply learned per-dimension weights:
+3. Applies learned weights
    - `weighted = combined * weights`
-4. Update membrane:
+4. Updates membrane
    - `u = leak * u + weighted`
-5. Compute a graded support signal:
-   - `support = sigmoid((u - threshold) / scale) * abs(combined)`
-6. Update the eligibility trace:
-   - `trace = trace_decay * trace + support`
-7. Mark active dimensions where:
-   - `u > threshold`
-8. Add an active bonus to the trace for fired dimensions.
+5. Forms a graded support signal
+6. Updates the eligibility trace
+7. Fires dimensions where `u > threshold`
+8. Adjusts `threshold` toward the target firing rate
 
-The support signal and active bonus are preserved from the original gate logic.
-
-### Adaptive threshold
-
-After selecting active dimensions for a token, the threshold is adjusted toward a target firing rate:
-
-- `rate = active_dims / dim`
-- `threshold += threshold_lr * (rate - target_rate)`
-- threshold is clamped at zero from below
-
-This is what keeps the selector from trivially firing everywhere or nowhere forever.
+This is still the core mechanism. What changed is how the selected dimensions are consumed downstream.
 
 ## Clamp Logic
 
-The selector output is not used raw.
+Raw selector firing is still clamped into an active-dimension budget:
 
-It is passed through the same style of clamp logic as the Rust implementation:
+- `gate_frac` sets the target active fraction
+- `gate_softness` defines the min/max band
+- underfiring dims are backfilled by `abs(value) * abs(weight)` ranking
+- overfiring dims are truncated
 
-1. Compute the requested active-dimension budget from:
-   - `gate_frac`
-   - `gate_softness`
-2. Convert that into:
-   - `min_active`
-   - `max_active`
-3. If too many dimensions fire:
-   - truncate to `max_active`
-4. If too few dimensions fire:
-   - backfill dimensions using `abs(value) * abs(weight)` ranking until `min_active` is reached
+That keeps the selector from drifting into “everything on” or “nothing on” behavior.
 
-This means the active set is always bounded, even when the raw selector is unstable.
+## Selector Learning Hooks
 
-## What the Gate Actually Does in This Port
+The DeepSeek port now includes the gate-side learning API from Kanae-Kocho:
 
-The gate currently applies a dense mask:
+- `apply_reward`
+- `apply_token_reward`
+- `apply_batch_signal`
+- `apply_batch_signal_scaled`
+- `apply_batch_signal_soft`
+- `plasticity_scores`
+- reward EMA / advantage tracking
+- weight recentering
 
-- selected dimensions keep their normalized activation
-- non-selected dimensions are set to zero
+This means the gate is not just a static runtime mask. It can adapt over training in the toy harness.
 
-So the current mechanism changes information flow, but it does not yet reduce kernel FLOPs in a hardware-efficient way.
+## Gate Metadata
 
-That distinction matters:
+The gate no longer acts only by mutating a tensor and hoping MLA survives. It now exposes structured metadata:
 
-- behaviorally, the gate is real now
-- computationally, it is still dense execution with masked activations
+- `selection_mask`
+- `active_indices`
+- `active_counts`
+- cached MPS-native `int32` copies for the sparse backend
 
-This is the right first step. It lets us test whether the mechanism is useful before attempting sparse kernels or structural pruning.
+That gives the repo a proper control plane:
 
-## Decode-Time State Handling
+- gate decides what is active
+- MLA decides how to execute using that decision
 
-The gate state is decode-aware.
+This boundary is what made the sparse projection work possible without rewriting attention math.
 
-- If `start_pos == 0`, the selector state is reset.
-- If decoding continues from a later position, the selector state is reused.
+## Sparse Projection Path
 
-That means the gate can carry temporal context across incremental generation in the toy path.
+The current sparse path is stage-2A style projection sparsity, not full sparse MLA.
 
-## What Is Intentionally Not Implemented Yet
+### Dense fallback
 
-This round does not yet include:
+When sparse projection is disabled or unsupported:
 
-- reward-based training updates for the gate
-- batch-signal updates
-- sparse QKV kernels
-- sparse KV storage driven by gate indices
-- FFN-path gating
-- compatibility with official giant DeepSeek checkpoints under the toy config
+- gate output is applied as a dense mask
+- MLA uses standard dense projection modules
 
-The current port is inference-first, because this repo itself is inference-first.
+### Compact sparse reference
+
+When sparse projection is enabled but native MPS cannot be used:
+
+- the code falls back to a padded compact gather/matmul path
+- this exists mainly for parity and debugging
+
+### Native MPS sparse projection
+
+On supported MPS shapes:
+
+- active dimension indices are passed into a Metal kernel
+- the kernel accumulates only over active hidden dimensions
+- single and fused pair kernels are available
+
+### Fused pair projection
+
+The current fast path is the fused pair path:
+
+- `wq + wkv_a` when `q_lora_rank == 0`
+- `wq_a + wkv_a` when `q_lora_rank > 0`
+
+This matters because the same gated hidden state and active-index metadata feed both projections. Fusing them avoids paying the metadata and launch overhead twice.
+
+## Native MPS Fast Paths
+
+There are now two native MPS pieces:
+
+### 1. Native gate scan
+
+- lives in `inference/native/gate_scan_mps.mm`
+- accelerates the recurrent selector scan
+- removes the old Python token loop bottleneck from the gate
+
+### 2. Native sparse projection
+
+- lives in `inference/native/sparse_projection_mps.mm`
+- accelerates sparse projection for supported MPS shapes
+- supports both single and fused pair kernels
+
+The sparse projection autograd path is intentionally hybrid:
+
+- forward: native MPS kernel
+- backward: exact dense formulas in PyTorch
+
+That keeps the implementation correct and easy to validate while still moving the expensive forward path off Python.
 
 ## Apple Silicon Compatibility
 
 The toy path is compatible with Apple Silicon through PyTorch MPS.
 
-Validated path:
+The repo now handles:
+
+- missing Triton on macOS
+- `fp32` toy runs
+- MPS-safe causal mask construction
+- native MPS gate scan
+- native MPS sparse projection
+
+Smoke-checked path:
 
 ```bash
 cd /Volumes/Blackhole/Github/DEEPSEEK-V3
 ./.venv/bin/python inference/toy_run.py \
   --config inference/configs/config_toy_gate.json \
-  --device mps
+  --device mps \
+  --simulate-learning
 ```
 
-This was validated with:
+## What The Current Local Experiments Show
 
-- PyTorch `2.4.1`
-- `mps available == True`
-- toy forward pass
-- one incremental decode step
+At the moment, the strongest conclusions are:
 
-The official Triton and FP8 paths remain Linux/CUDA-oriented.
+- the gate is real and adaptive
+- the fused MPS sparse backend is the correct sparse backend for this repo
+- fused sparse projection is slightly better than dense-gated on average in recent local sweeps
+- the gated variants still do not clearly dominate the ungated base model across all quality metrics
 
-## How to Read the Current Port
+So the engineering side is in a healthier place than before, but the model-quality question is still open.
+
+## What Is Still Not Implemented
+
+This fork still does not include:
+
+- sparse MLA latent-state math
+- sparse KV cache compaction driven by gate indices
+- sparse score/value accumulation
+- FFN-path gating
+- official giant-checkpoint support under the toy config
+
+So the current sparse story is:
+
+- selector sparsity: yes
+- projection sparsity: yes
+- full attention/KV sparsity: not yet
+
+## How To Read The Code
 
 If you want to inspect the implementation in order, read:
 
 1. `inference/model.py`
 2. `inference/dim_gate.py`
-3. `inference/configs/config_toy_gate.json`
-4. `inference/toy_run.py`
+3. `inference/sparse_mla.py`
+4. `inference/mla_native.py`
+5. `inference/native/gate_scan_mps.mm`
+6. `inference/native/sparse_projection_mps.mm`
+7. `inference/train_gate_compare.py`
 
 Focus first on:
 
-- `Block.forward` for the insertion point
-- `HiddenDimensionGate.forward` for masking behavior
-- `PlasticContextSpiker.step` for selector dynamics
+- `Block.forward()` for the insertion point
+- `HiddenDimensionGate.forward()` for gate metadata emission
+- `MLA.forward()` for sparse projection consumption
+- `sparse_project_hidden_pair()` for the current fused sparse fast path
 
-## Practical Meaning of This Round
+## Practical Meaning Of The Current Fork
 
-After this first round, this repo can now do something it could not do before:
+This repo can now do something the original inference tree could not do:
 
-- instantiate a toy DeepSeek-style architecture locally
-- run it on Apple Silicon
-- apply the Kanae hidden-dimension gate at the correct transformer insertion point
-- inspect gate statistics layer by layer
+- run a toy DeepSeek-style architecture locally on Apple Silicon
+- learn and evaluate a Kanae-style hidden-dimension gate
+- compare dense-gated vs sparse-gated execution
+- run the sparse path through native MPS kernels instead of Python bookkeeping
 
-That gives us a local experimental base for the next step, which should be training or distillation rather than more inference-only plumbing.
+That gives you a usable local platform for the next real step:
+
+- either improving gated-vs-base model quality
+- or pushing stage 2B toward latent sparsity and KV-cache compaction

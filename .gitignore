@@ -170,3 +170,8 @@ cython_debug/
 .vscode/*
 
 .DS_Store
+
+# Local experiment artifacts
+results/
+inference/native/build/
+inference/native/build_sparse_projection/
