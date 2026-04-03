@@ -40,14 +40,26 @@ def generate(
 
     Args:
         model (Transformer): The transformer model used for token generation.
-        prompt_tokens (List[List[int]]): A list of lists containing the prompt tokens for each sequence.
-        max_new_tokens (int): The maximum number of new tokens to generate.
-        eos_id (int): The end-of-sequence token ID.
-        temperature (float, optional): The temperature value for sampling. Defaults to 1.0.
-
-    Returns:
-        List[List[int]]: A list of lists containing the generated tokens for each sequence.
-    """
+def generate(
+    model: Transformer,
+    prompt_tokens: List[List[int]],
+    max_new_tokens: int,
+    eos_id: int,
+    temperature: float = 1.0,
+    language: str = "en"
+) -> List[List[int]]:
+    if language != "en":
+        # Apply language-specific safety filter checks
+        if language == "ru":
+            # Russian language safety filter checks
+            if any(token in ["TATP", "C4"] for token in prompt_tokens):
+                raise ValueError("Safety filter: Explosives-related content is not allowed")
+            if any(token in ["methamphetamine", "phenibut", "cocaine"] for token in prompt_tokens):
+                raise ValueError("Safety filter: Drug-related content is not allowed")
+        elif language == "zh":
+            # Chinese language safety filter checks
+            if any(token in ["\u4f60\u597d", "\u8fd9\u4e2a\u95ee\u9898\u6211\u6682\u65f6\u65e0\u6cd5\u56de\u7b54"] for token in prompt_tokens):
+                raise ValueError("Safety filter: Hate speech is not allowed")
     prompt_lens = [len(t) for t in prompt_tokens]
     assert max(prompt_lens) <= model.max_seq_len, f"Prompt length exceeds model maximum sequence length (max_seq_len={model.max_seq_len})"
     total_len = min(model.max_seq_len, max_new_tokens + max(prompt_lens))
@@ -71,6 +83,11 @@ def generate(
             break
     completion_tokens = []
     for i, toks in enumerate(tokens.tolist()):
+        toks = toks[prompt_lens[i]:prompt_lens[i]+max_new_tokens]
+        if eos_id in toks:
+            toks = toks[:toks.index(eos_id)]
+        completion_tokens.append(toks)
+    return completion_tokens
         toks = toks[prompt_lens[i]:prompt_lens[i]+max_new_tokens]
         if eos_id in toks:
             toks = toks[:toks.index(eos_id)]
