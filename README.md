@@ -258,8 +258,8 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 
 Dependencies:
 ```pip-requirements
-torch==2.4.1
-triton==3.0.0
+torch>=2.5.0
+triton>=3.2.0
 transformers==4.46.3
 safetensors==0.4.5
 ```
