@@ -359,3 +359,7 @@ This code repository is licensed under [the MIT License](LICENSE-CODE). The use 
 
 ## 9. Contact
 If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).
+
+## 10. My practice contribution
+This is a test to learn how pull requests work.  
+I'm following a tutorial to understand the open source contribution workflow.
