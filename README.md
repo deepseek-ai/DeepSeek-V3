@@ -31,6 +31,11 @@
 
 ## Table of Contents
 
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
+
 1. [Introduction](#1-introduction)
 2. [Model Summary](#2-model-summary)
 3. [Model Downloads](#3-model-downloads)
@@ -43,6 +48,11 @@
 
 
 ## 1. Introduction
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 We present DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters with 37B activated for each token. 
 To achieve efficient inference and cost-effective training, DeepSeek-V3 adopts Multi-head Latent Attention (MLA) and DeepSeekMoE architectures, which were thoroughly validated in DeepSeek-V2. 
@@ -57,6 +67,11 @@ Throughout the entire training process, we did not experience any irrecoverable 
 </p>
 
 ## 2. Model Summary
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 ---
 
@@ -86,6 +101,11 @@ Throughout the entire training process, we did not experience any irrecoverable 
 
 ## 3. Model Downloads
 
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
+
 <div align="center">
 
 | **Model** | **#Total Params** | **#Activated Params** | **Context Length** | **Download** |
@@ -102,18 +122,54 @@ To ensure optimal performance and flexibility, we have partnered with open-sourc
 
 For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md](./README_WEIGHTS.md) for details on the Main Model weights and the Multi-Token Prediction (MTP) Modules. Please note that MTP support is currently under active development within the community, and we welcome your contributions and feedback.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
 ## 4. Evaluation Results
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 ### Base Model
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 #### Standard Benchmarks
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 <div align="center">
 
 
 |  | Benchmark (Metric) | # Shots | DeepSeek-V2 | Qwen2.5 72B | LLaMA3.1 405B | DeepSeek-V3 |
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 |---|-------------------|----------|--------|-------------|---------------|---------|
 | | Architecture | - | MoE | Dense | Dense | MoE |
 | | # Activated Params | - | 21B | 72B | 405B | 37B |
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 | | # Total Params | - | 236B | 72B | 405B | 671B |
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 | English | Pile-test (BPB) | - | 0.606 | 0.638 | **0.542** | 0.548 |
 | | BBH (EM) | 3-shot | 78.8 | 79.8 | 82.9 | **87.5** |
 | | MMLU (Acc.) | 5-shot | 78.4 | 85.0 | 84.4 | **87.1** |
@@ -154,6 +210,11 @@ For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md
 > For more evaluation details, please check our paper. 
 
 #### Context Window
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 <p align="center">
   <img width="80%" src="figures/niah.png">
 </p>
@@ -161,14 +222,34 @@ For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md
 Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 performs well across all context window lengths up to **128K**. 
 
 ### Chat Model
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 #### Standard Benchmarks (Models larger than 67B)
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 <div align="center">
 
 | | **Benchmark (Metric)** | **DeepSeek V2-0506** | **DeepSeek V2.5-0905** | **Qwen2.5 72B-Inst.** | **Llama3.1 405B-Inst.** | **Claude-3.5-Sonnet-1022** | **GPT-4o 0513** | **DeepSeek V3** |
 |---|---------------------|---------------------|----------------------|---------------------|----------------------|---------------------------|----------------|----------------|
 | | Architecture | MoE | MoE | Dense | Dense | - | - | MoE |
 | | # Activated Params | 21B | 21B | 72B | 405B | - | - | 37B |
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 | | # Total Params | 236B | 236B | 72B | 405B | - | - | 671B |
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 | English | MMLU (EM) | 78.2 | 80.6 | 85.3 | **88.6** | **88.3** | 87.2 | **88.5** |
 | | MMLU-Redux (EM) | 77.9 | 80.3 | 85.6 | 86.2 | **88.9** | 88.0 | **89.1** |
 | | MMLU-Pro (EM) | 58.5 | 66.2 | 71.6 | 73.3 | **78.0** | 72.6 | 75.9 |
@@ -200,6 +281,11 @@ Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 pe
 
 ####  Open Ended Generation Evaluation
 
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
+
 <div align="center">
 
 
@@ -220,11 +306,21 @@ Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 pe
 
 
 ## 5. Chat Website & API Platform
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 You can chat with DeepSeek-V3 on DeepSeek's official website: [chat.deepseek.com](https://chat.deepseek.com/sign_in)
 
 We also provide OpenAI-Compatible API at DeepSeek Platform: [platform.deepseek.com](https://platform.deepseek.com/)
 
 ## 6. How to Run Locally
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 DeepSeek-V3 can be deployed locally using the following hardware and open-source community software:
 
@@ -249,9 +345,25 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 > [!NOTE]
 > Hugging Face's Transformers has not been directly supported yet.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
 ### 6.1 Inference with DeepSeek-Infer Demo (example only)
 
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
+
 #### System Requirements
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 > [!NOTE] 
 > Linux with Python 3.10 only. Mac and Windows are not supported.
@@ -264,6 +376,11 @@ transformers==4.46.3
 safetensors==0.4.5
 ```
 #### Model Weights & Demo Code Preparation
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 First, clone our DeepSeek-V3 GitHub repository:
 
@@ -280,7 +397,18 @@ pip install -r requirements.txt
 
 Download the model weights from Hugging Face, and put them into `/path/to/DeepSeek-V3` folder.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
 #### Model Weights Conversion
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 Convert Hugging Face model weights to a specific format:
 
@@ -289,6 +417,11 @@ python convert.py --hf-ckpt-path /path/to/DeepSeek-V3 --save-path /path/to/DeepS
 ```
 
 #### Run
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 Then you can chat with DeepSeek-V3:
 
@@ -304,6 +437,11 @@ torchrun --nnodes 2 --nproc-per-node 8 --node-rank $RANK --master-addr $ADDR gen
 
 ### 6.2 Inference with SGLang (recommended)
 
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
+
 [SGLang](https://github.com/sgl-project/sglang) currently supports [MLA optimizations](https://lmsys.org/blog/2024-09-04-sglang-v0-3/#deepseek-multi-head-latent-attention-mla-throughput-optimizations), [DP Attention](https://lmsys.org/blog/2024-12-04-sglang-v0-4/#data-parallelism-attention-for-deepseek-models), FP8 (W8A8), FP8 KV Cache, and Torch Compile, delivering state-of-the-art latency and throughput performance among open-source frameworks.
 
 Notably, [SGLang v0.4.1](https://github.com/sgl-project/sglang/releases/tag/v0.4.1) fully supports running DeepSeek-V3 on both **NVIDIA and AMD GPUs**, making it a highly versatile and robust solution.
@@ -315,6 +453,11 @@ Multi-Token Prediction (MTP) is in development, and progress can be tracked in t
 Here are the launch instructions from the SGLang team: https://github.com/sgl-project/sglang/tree/main/benchmark/deepseek_v3
 
 ### 6.3 Inference with LMDeploy (recommended)
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 [LMDeploy](https://github.com/InternLM/lmdeploy), a flexible and high-performance inference and serving framework tailored for large language models, now supports DeepSeek-V3. It offers both offline pipeline processing and online deployment capabilities, seamlessly integrating with PyTorch-based workflows.
 
 For comprehensive step-by-step instructions on running DeepSeek-V3 with LMDeploy, please refer to here: https://github.com/InternLM/lmdeploy/issues/2960
@@ -322,29 +465,88 @@ For comprehensive step-by-step instructions on running DeepSeek-V3 with LMDeploy
 
 ### 6.4 Inference with TRT-LLM (recommended)
 
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
+
 [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) now supports the DeepSeek-V3 model, offering precision options such as BF16 and INT4/INT8 weight-only. Support for FP8 is currently in progress and will be released soon. You can access the custom branch of TRTLLM specifically for DeepSeek-V3 support through the following link to experience the new features directly: https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/deepseek_v3. 
 
 
 ### 6.5 Inference with vLLM (recommended)
 
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
+
 [vLLM](https://github.com/vllm-project/vllm) v0.6.6 supports DeepSeek-V3 inference for FP8 and BF16 modes on both NVIDIA and AMD GPUs. Aside from standard techniques, vLLM offers _pipeline parallelism_ allowing you to run this model on multiple machines connected by networks. For detailed guidance, please refer to the [vLLM instructions](https://docs.vllm.ai/en/latest/serving/distributed_serving.html). Please feel free to follow [the enhancement plan](https://github.com/vllm-project/vllm/issues/11539) as well.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
 ### 6.6 Inference with LightLLM (recommended)
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 [LightLLM](https://github.com/ModelTC/lightllm/tree/main) v1.0.1 supports single-machine and multi-machine tensor parallel deployment for DeepSeek-R1 (FP8/BF16) and provides mixed-precision deployment, with more quantization modes continuously integrated. For more details, please refer to [LightLLM instructions](https://lightllm-en.readthedocs.io/en/latest/getting_started/quickstart.html). Additionally, LightLLM offers PD-disaggregation deployment for DeepSeek-V2, and the implementation of PD-disaggregation for DeepSeek-V3 is in development.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
 ### 6.7 Recommended Inference Functionality with AMD GPUs
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 
 In collaboration with the AMD team, we have achieved Day-One support for AMD GPUs using SGLang, with full compatibility for both FP8 and BF16 precision. For detailed guidance, please refer to the [SGLang instructions](#63-inference-with-lmdeploy-recommended).
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
 ### 6.8 Recommended Inference Functionality with Huawei Ascend NPUs
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 The [MindIE](https://www.hiascend.com/en/software/mindie) framework from the Huawei Ascend community has successfully adapted the BF16 version of DeepSeek-V3. For step-by-step guidance on Ascend NPUs, please follow the [instructions here](https://modelers.cn/models/MindIE/deepseekv3).
 
 
 ## 7. License
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 This code repository is licensed under [the MIT License](LICENSE-CODE). The use of DeepSeek-V3 Base/Chat models is subject to [the Model License](LICENSE-MODEL). DeepSeek-V3 series (including Base and Chat) supports commercial use.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
 ## 8. Citation
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 ```
 @misc{deepseekai2024deepseekv3technicalreport,
       title={DeepSeek-V3 Technical Report}, 
@@ -358,4 +560,17 @@ This code repository is licensed under [the MIT License](LICENSE-CODE). The use 
 ```
 
 ## 9. Contact
+
+<p align="center">
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/stargazers"><img src="https://img.shields.io/github/stars/deepseek-ai/DeepSeek-V3?style=social" alt="Stars"/></a>
+  <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
+</p>
 If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).
+
+## Contributing
+
+We welcome contributions! Please open an issue or pull request.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
