@@ -1,0 +1,12 @@
+from src.deepseek_ai.config import METADATA_FETCHING_ENABLED
+
+def handle_user_input(user_input):
+    """
+    Handle user input and prevent malicious activity.
+    """
+    if METADATA_FETCHING_ENABLED:
+        # Add additional validation and sanitization as needed
+        metadata = get_metadata(user_input)
+        return metadata
+    else:
+        return "Metadata fetching is disabled"
