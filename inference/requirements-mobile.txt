@@ -1,0 +1,9 @@
+# DeepSeek Mobile Dependencies
+# CPU-only versions for Android/Termux, iOS/iSH, HarmonyOS
+
+torch>=2.0.0  # CPU version (no CUDA)
+transformers>=4.40.0
+safetensors>=0.4.0
+# Note: triton removed (NVIDIA GPU only, not available on ARM/Android)
+# Mobile users should pip install torch --index-url https://download.pytorch.org/whl/cpu
+
