@@ -181,5 +181,9 @@ if __name__ == "__main__":
     parser.add_argument("--max-new-tokens", type=int, default=200)
     parser.add_argument("--temperature", type=float, default=0.2)
     args = parser.parse_args()
+    args.ckpt_path = args.ckpt_path.strip()
+    args.config = args.config.strip()
+    if args.input_file:
+        args.input_file = args.input_file.strip()
     assert args.input_file or args.interactive, "Either input-file or interactive mode must be specified"
     main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature)
