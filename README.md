@@ -37,9 +37,18 @@
 4. [Evaluation Results](#4-evaluation-results)
 5. [Chat Website & API Platform](#5-chat-website--api-platform)
 6. [How to Run Locally](#6-how-to-run-locally)
-7. [License](#7-license)
-8. [Citation](#8-citation)
-9. [Contact](#9-contact)
+    - 6.1 [DeepSeek-Infer Demo](#61-inference-with-deepseek-infer-demo-example-only)
+    - 6.2 [SGLang](#62-inference-with-sglang-recommended)
+    - 6.3 [LMDeploy](#63-inference-with-lmdeploy-recommended)
+    - 6.4 [TRT-LLM](#64-inference-with-trt-llm-recommended)
+    - 6.5 [vLLM](#65-inference-with-vllm-recommended)
+    - 6.6 [LightLLM](#66-inference-with-lightllm-recommended)
+    - 6.7 [AMD GPUs](#67-recommended-inference-functionality-with-amd-gpus)
+    - 6.8 [Huawei Ascend NPUs](#68-recommended-inference-functionality-with-huawei-ascend-npus)
+7. [Contributing](#7-contributing)
+8. [License](#8-license)
+9. [Citation](#9-citation)
+10. [Contact](#10-contact)
 
 
 ## 1. Introduction
@@ -97,6 +106,9 @@ Throughout the entire training process, we did not experience any irrecoverable 
 
 > [!NOTE]
 > The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights.
+
+> [!NOTE]
+> **DeepSeek-V3.1** is also available. Use the provided `inference/configs/config_v3.1.json` configuration for the latest model version. Check [Hugging Face](https://huggingface.co/deepseek-ai) for the corresponding weights.
 
 To ensure optimal performance and flexibility, we have partnered with open-source communities and hardware vendors to provide multiple ways to run the model locally. For step-by-step guidance, check out Section 6: [How_to Run_Locally](#6-how-to-run-locally).
 
@@ -198,7 +210,7 @@ Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 pe
 > All models are evaluated in a configuration that limits the output length to 8K. Benchmarks containing fewer than 1000 samples are tested multiple times using varying temperature settings to derive robust final results. DeepSeek-V3 stands as the best-performing open-source model, and also exhibits competitive performance against frontier closed-source models.
 
 
-####  Open Ended Generation Evaluation
+#### Open Ended Generation Evaluation
 
 <div align="center">
 
@@ -256,26 +268,19 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 > [!NOTE] 
 > Linux with Python 3.10 only. Mac and Windows are not supported.
 
-Dependencies:
-```pip-requirements
-torch==2.4.1
-triton==3.0.0
-transformers==4.46.3
-safetensors==0.4.5
-```
-#### Model Weights & Demo Code Preparation
-
-First, clone our DeepSeek-V3 GitHub repository:
-
-```shell
-git clone https://github.com/deepseek-ai/DeepSeek-V3.git
-```
-
-Navigate to the `inference` folder and install dependencies listed in `requirements.txt`. Easiest way is to use a package manager like `conda` or `uv` to create a new virtual environment and install the dependencies.
+Dependencies are listed in `requirements.txt`. Easiest way is to use a package manager like `conda` or `uv` to create a new virtual environment and install the dependencies:
 
 ```shell
 cd DeepSeek-V3/inference
 pip install -r requirements.txt
+```
+
+#### Model Weights & Demo Code Preparation
+
+First, clone the DeepSeek-V3 GitHub repository:
+
+```shell
+git clone https://github.com/deepseek-ai/DeepSeek-V3.git
 ```
 
 Download the model weights from Hugging Face, and put them into `/path/to/DeepSeek-V3` folder.
@@ -335,16 +340,26 @@ For comprehensive step-by-step instructions on running DeepSeek-V3 with LMDeploy
 
 ### 6.7 Recommended Inference Functionality with AMD GPUs
 
-In collaboration with the AMD team, we have achieved Day-One support for AMD GPUs using SGLang, with full compatibility for both FP8 and BF16 precision. For detailed guidance, please refer to the [SGLang instructions](#63-inference-with-lmdeploy-recommended).
+In collaboration with the AMD team, we have achieved Day-One support for AMD GPUs using SGLang, with full compatibility for both FP8 and BF16 precision. For detailed guidance, please refer to the [SGLang instructions](#62-inference-with-sglang-recommended).
 
 ### 6.8 Recommended Inference Functionality with Huawei Ascend NPUs
 The [MindIE](https://www.hiascend.com/en/software/mindie) framework from the Huawei Ascend community has successfully adapted the BF16 version of DeepSeek-V3. For step-by-step guidance on Ascend NPUs, please follow the [instructions here](https://modelers.cn/models/MindIE/deepseekv3).
 
 
-## 7. License
+## 7. Contributing
+
+We welcome community contributions! Areas where help is especially valuable:
+
+- **Multi-Token Prediction (MTP)** — MTP support is under active community development. See [README_WEIGHTS.md](./README_WEIGHTS.md) for weight structure details.
+- **Inference optimizations** — Triton kernel improvements, new quantization formats, or hardware backend support.
+- **Documentation** — clarifications, examples, and corrections are always appreciated.
+
+To contribute, fork the repository, create a branch, and open a pull request against `main`. Please keep changes focused — one logical change per PR.
+
+## 8. License
 This code repository is licensed under [the MIT License](LICENSE-CODE). The use of DeepSeek-V3 Base/Chat models is subject to [the Model License](LICENSE-MODEL). DeepSeek-V3 series (including Base and Chat) supports commercial use.
 
-## 8. Citation
+## 9. Citation
 ```
 @misc{deepseekai2024deepseekv3technicalreport,
       title={DeepSeek-V3 Technical Report}, 
@@ -357,5 +372,5 @@ This code repository is licensed under [the MIT License](LICENSE-CODE). The use 
 }
 ```
 
-## 9. Contact
+## 10. Contact
 If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).
