@@ -27,6 +27,11 @@ def sample(logits, temperature: float = 1.0):
     return probs.div_(torch.empty_like(probs).exponential_(1)).argmax(dim=-1)
 
 
+def _next_token(logits: torch.Tensor, temperature: float) -> torch.Tensor:
+    """Sample (temperature > 0) or argmax (temperature == 0) a token from logits."""
+    return sample(logits, temperature) if temperature > 0 else logits.argmax(dim=-1)
+
+
 @torch.inference_mode()
 def generate(
     model: Transformer,
@@ -37,6 +42,39 @@ def generate(
 ) -> List[List[int]]:
     """
     Generates new tokens based on the given prompt tokens using the specified model.
+
+    When MTP modules are available (``model.mtp_modules`` is non-empty), uses
+    the DeepSeek-V3 Multi-Token Prediction block as a single-token draft model
+    for speculative decoding:
+
+    1. ``forward_with_hidden`` produces the next token T_N plus the hidden
+       state h_{N-1} that produced it (one main-model seqlen=1 forward).
+    2. ``forward_mtp`` drafts a speculation T_{N+1}^spec from (T_N, h_{N-1})
+       using a single extra transformer block — cheap relative to a main
+       forward. Write T_{N+1}^spec to slot ``cur_pos + 1`` and mark a
+       speculation pending.
+    3. The next iteration's verify step runs a seqlen=1 ``forward_with_hidden``
+       over the accepted token at slot ``cur_pos`` (= T_N), recomputing the
+       verifier logits for slot ``cur_pos + 1``. The verified token T_{N+1}
+       is compared against the speculation: on a match the speculated token is
+       accepted as-is; on a miss it is replaced in place by the verified token.
+    4. The verify step's hidden is then used to draft the next speculation
+       (step 2 again), closing the loop.
+
+    With a single MTP module the scheme is correctness-preserving: the output
+    sequence is determined entirely by the main model, with MTP speculation
+    only ever overwritten on a miss. There is no wall-clock speedup with a
+    pure seqlen=1 verify because each accepted token still costs one main
+    forward — the speedup surface is the seqlen=2 verify (process the accepted
+    token and the speculation in a single forward, comparing per-position
+    logits), which the cache-aware causal mask in ``forward_with_hidden`` now
+    supports and which is left as a follow-up extension. In the current shape
+    the contribution is the working MTP draft+verify plumbing plus the mask
+    fix that unblocks multi-token mid-decode forwards.
+
+    The scheme degrades to standard autoregressive decoding when MTP modules
+    are absent (``num_nextn_predict_layers == 0``), so configs that do not ship
+    MTP weights are unaffected.
 
     Args:
         model (Transformer): The transformer model used for token generation.
@@ -51,24 +89,91 @@ def generate(
     prompt_lens = [len(t) for t in prompt_tokens]
     assert max(prompt_lens) <= model.max_seq_len, f"Prompt length exceeds model maximum sequence length (max_seq_len={model.max_seq_len})"
     total_len = min(model.max_seq_len, max_new_tokens + max(prompt_lens))
-    tokens = torch.full((len(prompt_tokens), total_len), -1, dtype=torch.long, device="cuda")
+    # Source the device from the model parameters so the loop works on CPU for
+    # testing as well as on the production CUDA device.
+    device = next(model.parameters()).device
+    tokens = torch.full((len(prompt_tokens), total_len), -1, dtype=torch.long, device=device)
     for i, t in enumerate(prompt_tokens):
-        tokens[i, :len(t)] = torch.tensor(t, dtype=torch.long, device="cuda")
+        tokens[i, :len(t)] = torch.tensor(t, dtype=torch.long, device=device)
     prev_pos = 0
-    finished = torch.tensor([False] * len(prompt_tokens), device="cuda")
+    finished = torch.tensor([False] * len(prompt_tokens), device=device)
     prompt_mask = tokens != -1
-    for cur_pos in range(min(prompt_lens), total_len):
-        logits = model.forward(tokens[:, prev_pos:cur_pos], prev_pos)
-        if temperature > 0:
-            next_token = sample(logits, temperature)
-        else:
-            next_token = logits.argmax(dim=-1)
-        next_token = torch.where(prompt_mask[:, cur_pos], tokens[:, cur_pos], next_token)
-        tokens[:, cur_pos] = next_token
-        finished |= torch.logical_and(~prompt_mask[:, cur_pos], next_token == eos_id)
-        prev_pos = cur_pos
+    mtp_enabled = len(model.mtp_modules) > 0
+
+    spec_valid = False
+
+    cur_pos = min(prompt_lens)
+    while cur_pos < total_len:
+        if spec_valid:
+            # ---- Verification step (seqlen=1) ----
+            # Invariant: slots 0..cur_pos-1 hold accepted tokens whose KV cache
+            # is populated.  tokens[:, cur_pos] holds the speculation to
+            # verify.  Re-forward the last accepted token (slot cur_pos-1) at
+            # start_pos = cur_pos-1 to reproduce the main-model prediction for
+            # slot cur_pos and compare against the speculation. This seqlen=1
+            # forward also re-populates KV slot cur_pos-1 (idempotent, the
+            # token is unchanged) and produces a fresh hidden at slot
+            # cur_pos-1 used to re-speculate on a miss / speculate next on a
+            # hit.
+            verify_input = tokens[:, cur_pos - 1:cur_pos]
+            assert 0 <= cur_pos - 1 < total_len, \
+                f"verify position {cur_pos - 1} out of bounds (total_len={total_len})"
+            verify_hidden, verify_logit = model.forward_with_hidden(
+                verify_input, cur_pos - 1,
+            )
+            verified_token = _next_token(verify_logit, temperature).squeeze()
+            tokens[:, cur_pos] = torch.where(
+                prompt_mask[:, cur_pos], tokens[:, cur_pos], verified_token,
+            )
+            finished |= torch.logical_and(
+                ~prompt_mask[:, cur_pos], verified_token == eos_id,
+            )
+            spec_valid = False
+            if finished.all():
+                break
+            # Slot cur_pos is settled; advance.
+            prev_pos = cur_pos
+            cur_pos = cur_pos + 1
+            # Speculate slot cur_pos using the hidden at slot cur_pos-1 (the
+            # forward we just ran) and the chosen token at cur_pos-1.
+            if mtp_enabled and cur_pos < total_len:
+                last_token = tokens[:, prev_pos - 1]
+                mtp_logits = model.forward_mtp(0, last_token, verify_hidden, prev_pos - 1)
+                speculative_token = _next_token(mtp_logits, temperature)
+                speculative_token = torch.where(
+                    prompt_mask[:, cur_pos], tokens[:, cur_pos], speculative_token,
+                )
+                tokens[:, cur_pos] = speculative_token.squeeze()
+                spec_valid = True
+            continue
+
+        # ---- Standard seqlen=1 step (first token, or after a forced rewind) ----
+        sf_input = tokens[:, prev_pos:cur_pos]
+        assert 0 <= prev_pos < cur_pos <= total_len, \
+            f"seqlen=1 range [{prev_pos},{cur_pos}) invalid (total_len={total_len})"
+        hidden, logits = model.forward_with_hidden(sf_input, prev_pos)
+        first_token = _next_token(logits, temperature)
+        first_token = torch.where(
+            tokens[:, cur_pos] != -1, tokens[:, cur_pos], first_token
+        )
+        tokens[:, cur_pos] = first_token.squeeze()
+        finished |= torch.logical_and(
+            ~prompt_mask[:, cur_pos], first_token == eos_id
+        )
         if finished.all():
             break
+        spec_valid = False
+        if mtp_enabled and cur_pos + 1 < total_len:
+            mtp_logits = model.forward_mtp(0, first_token, hidden, cur_pos)
+            speculative_token = _next_token(mtp_logits, temperature)
+            speculative_token = torch.where(
+                prompt_mask[:, cur_pos + 1], tokens[:, cur_pos + 1], speculative_token,
+            )
+            tokens[:, cur_pos + 1] = speculative_token.squeeze()
+            spec_valid = True
+        prev_pos = cur_pos
+        cur_pos = cur_pos + 1
+
     completion_tokens = []
     for i, toks in enumerate(tokens.tolist()):
         toks = toks[prompt_lens[i]:prompt_lens[i]+max_new_tokens]

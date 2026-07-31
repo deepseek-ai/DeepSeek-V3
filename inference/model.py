@@ -84,6 +84,8 @@ class ModelArgs:
     beta_fast: int = 32
     beta_slow: int = 1
     mscale: float = 1.
+    # mtp
+    num_nextn_predict_layers: int = 0
 
 
 class ParallelEmbedding(nn.Module):
@@ -735,6 +737,29 @@ class Block(nn.Module):
         return x
 
 
+class MTPModule(nn.Module):
+    def __init__(self, mtp_layer_id: int, args: ModelArgs):
+        super().__init__()
+        dim = args.dim
+        self.enorm = RMSNorm(dim)
+        self.hnorm = RMSNorm(dim)
+        self.eh_proj = ColumnParallelLinear(dim * 2, dim)
+        self.transformer_block = Block(mtp_layer_id, args)
+
+    def forward(
+        self, 
+        embedding: torch.Tensor, 
+        hidden: torch.Tensor, 
+        start_pos: int, 
+        freqs_cis: torch.Tensor, 
+        mask: Optional[torch.Tensor]
+    ) -> torch.Tensor:
+        hnorm = self.hnorm(hidden)
+        enorm = self.enorm(embedding)
+        combined_proj = self.eh_proj(torch.cat([hnorm, enorm], dim=-1))
+        return self.transformer_block(combined_proj, start_pos, freqs_cis, mask)
+
+
 class Transformer(nn.Module):
     """
     Transformer model with positional embeddings, multiple layers, and output projection.
@@ -746,6 +771,7 @@ class Transformer(nn.Module):
         norm (nn.Module): Layer normalization applied after all blocks.
         head (nn.Module): Output projection layer mapping to vocabulary size.
         freqs_cis (torch.Tensor): Precomputed complex exponential values for rotary embeddings.
+        mtp_modules (nn.ModuleList, optional): Multi-Token Prediction modules for speculative decoding.
     """
     def __init__(self, args: ModelArgs):
         """
@@ -768,11 +794,16 @@ class Transformer(nn.Module):
         self.norm = RMSNorm(args.dim)
         self.head = ColumnParallelLinear(args.dim, args.vocab_size, dtype=torch.get_default_dtype())
         self.register_buffer("freqs_cis", precompute_freqs_cis(args), persistent=False)
+        self.args = args
+        self.mtp_modules = torch.nn.ModuleList()
+        for mtp_idx in range(args.num_nextn_predict_layers):
+            mtp_layer_id = args.n_layers + mtp_idx
+            self.mtp_modules.append(MTPModule(mtp_layer_id, args))
 
     @torch.inference_mode()
     def forward(self, tokens: torch.Tensor, start_pos: int = 0):
         """
-        Forward pass for the Transformer model.
+        Forward pass for the Transformer model, returning logits for the last token.
 
         Args:
             tokens (torch.Tensor): Input tensor of token IDs with shape (batch_size, seq_len).
@@ -781,16 +812,100 @@ class Transformer(nn.Module):
         Returns:
             torch.Tensor: Logits tensor of shape (batch_size, vocab_size).
         """
+        _, logits = self.forward_with_hidden(tokens, start_pos)
+        return logits
+
+    @torch.inference_mode()
+    def forward_with_hidden(self, tokens: torch.Tensor, start_pos: int = 0,
+                            return_per_token_logits: bool = False):
+        """
+        Forward pass returning both the hidden state before the final norm-Head block and the logits.
+
+        Args:
+            tokens: token IDs with shape (batch_size, seq_len).
+            start_pos: starting position in the sequence.
+            return_per_token_logits: if True, return per-position logits
+                (batch, seqlen, vocab_size) and per-position hidden states.
+                Used by the MTP speculative-decoding verify pass to compare
+                each speculated token against the main-model prediction.
+
+        Returns:
+            When ``return_per_token_logits=False`` (default):
+                (hidden state of last token, logits for last token).
+            When ``return_per_token_logits=True``:
+                (all hidden states, all logits).
+        """
         seqlen = tokens.size(1)
         h = self.embed(tokens)
         freqs_cis = self.freqs_cis[start_pos:start_pos+seqlen]
         mask = None
         if seqlen > 1:
-            mask = torch.full((seqlen, seqlen), float("-inf"), device=tokens.device).triu_(1)
+            # Causal mask over the full cache. scores shape in MLA is
+            # (batch, seqlen, heads, end_pos) with end_pos = start_pos + seqlen,
+            # so the mask must be (seqlen, end_pos): the first `start_pos` columns
+            # (old KV cache) are all-visible and the trailing (seqlen, seqlen)
+            # block is upper-triangular to keep the new positions causal.
+            new_block = torch.full(
+                (seqlen, seqlen), float("-inf"), device=tokens.device
+            ).triu_(1)
+            if start_pos > 0:
+                cache_block = torch.zeros(
+                    (seqlen, start_pos), device=tokens.device
+                )
+                mask = torch.cat([cache_block, new_block], dim=-1)
+            else:
+                mask = new_block
         for layer in self.layers:
             h = layer(h, start_pos, freqs_cis, mask)
-        h = self.norm(h)[:, -1]
-        logits = self.head(h)
+        if return_per_token_logits:
+            per_hidden = h  # (batch, seqlen, dim) — all positions
+            per_logits = self.head(self.norm(per_hidden))
+            if world_size > 1:
+                all_logits = [torch.empty_like(per_logits) for _ in range(world_size)]
+                dist.all_gather(all_logits, per_logits)
+                per_logits = torch.cat(all_logits, dim=-1)
+            return per_hidden, per_logits
+        hidden = h[:, -1]
+        logits = self.head(self.norm(hidden))
+        if world_size > 1:
+            all_logits = [torch.empty_like(logits) for _ in range(world_size)]
+            dist.all_gather(all_logits, logits)
+            logits = torch.cat(all_logits, dim=-1)
+        return hidden, logits
+
+    @torch.inference_mode()
+    def forward_mtp(
+        self, 
+        mtp_idx: int, 
+        token: torch.Tensor, 
+        hidden: torch.Tensor, 
+        start_pos: int
+    ) -> torch.Tensor:
+        """
+        Forward pass through an MTP module for speculative decoding.
+
+        Args:
+            mtp_idx (int): Index of the MTP module to use (0-based).
+            token (torch.Tensor): Token tensor of shape (batch_size,) to feed into the 
+                MTP module as the speculative next token.
+            hidden (torch.Tensor): Hidden state from the main model's forward pass 
+                of shape (batch_size, dim), used by the MTP module as `h_i^{k-1}`.
+            start_pos (int): Position offset for rotary embeddings.
+
+        Returns:
+            torch.Tensor: Logits for the speculative next token.
+        """
+        embedding = self.embed(token.unsqueeze(1))
+        freqs_cis = self.freqs_cis[start_pos:start_pos+1]
+        mtp_h = self.mtp_modules[mtp_idx](
+            embedding=embedding,
+            hidden=hidden.unsqueeze(1),
+            start_pos=start_pos,
+            freqs_cis=freqs_cis,
+            mask=None
+        )
+        normed = self.norm(mtp_h[:, -1])
+        logits = self.head(normed)
         if world_size > 1:
             all_logits = [torch.empty_like(logits) for _ in range(world_size)]
             dist.all_gather(all_logits, logits)
