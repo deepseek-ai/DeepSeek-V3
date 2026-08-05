@@ -26,7 +26,7 @@
   <a href="https://github.com/deepseek-ai/DeepSeek-V3/blob/main/LICENSE-MODEL"><img alt="Model License"
     src="https://img.shields.io/badge/Model_License-Model_Agreement-f5de53?&color=f5de53"/></a>
   <br>
-  <a href="https://arxiv.org/pdf/2412.19437"><b>Paper Link</b>👁️</a>
+  <a href="https://arxiv.org/pdf/2412.19437"><b>Paper Link</b> 👁️</a>
 </div>
 
 ## Table of Contents
@@ -44,44 +44,37 @@
 
 ## 1. Introduction
 
-We present DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters with 37B activated for each token. 
-To achieve efficient inference and cost-effective training, DeepSeek-V3 adopts Multi-head Latent Attention (MLA) and DeepSeekMoE architectures, which were thoroughly validated in DeepSeek-V2. 
-Furthermore, DeepSeek-V3 pioneers an auxiliary-loss-free strategy for load balancing and sets a multi-token prediction training objective for stronger performance. 
-We pre-train DeepSeek-V3 on 14.8 trillion diverse and high-quality tokens, followed by Supervised Fine-Tuning and Reinforcement Learning stages to fully harness its capabilities. 
+We present DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters with 37B activated for each token.
+To achieve efficient inference and cost-effective training, DeepSeek-V3 adopts Multi-head Latent Attention (MLA) and DeepSeekMoE architectures, which were thoroughly validated in DeepSeek-V2.
+Furthermore, DeepSeek-V3 pioneers an auxiliary-loss-free strategy for load balancing and sets a multi-token prediction training objective for stronger performance.
+We pre-train DeepSeek-V3 on 14.8 trillion diverse and high-quality tokens, followed by Supervised Fine-Tuning and Reinforcement Learning stages to fully harness its capabilities.
 Comprehensive evaluations reveal that DeepSeek-V3 outperforms other open-source models and achieves performance comparable to leading closed-source models.
 Despite its excellent performance, DeepSeek-V3 requires only 2.788M H800 GPU hours for its full training.
-In addition, its training process is remarkably stable. 
-Throughout the entire training process, we did not experience any irrecoverable loss spikes or perform any rollbacks. 
+In addition, its training process is remarkably stable.
+Throughout the entire training process, we did not experience any irrecoverable loss spikes or perform any rollbacks.
+
 <p align="center">
   <img width="80%" src="figures/benchmark.png">
 </p>
 
 ## 2. Model Summary
 
----
-
 **Architecture: Innovative Load Balancing Strategy and Training Objective**
 
 - On top of the efficient architecture of DeepSeek-V2, we pioneer an auxiliary-loss-free strategy for load balancing, which minimizes the performance degradation that arises from encouraging load balancing.
--  We investigate a Multi-Token Prediction (MTP) objective and prove it beneficial to model performance. 
-    It can also be used for speculative decoding for inference acceleration. 
-
----
+- We investigate a Multi-Token Prediction (MTP) objective and prove it beneficial to model performance.
+  It can also be used for speculative decoding for inference acceleration.
 
 **Pre-Training: Towards Ultimate Training Efficiency**
 
-- We design an FP8 mixed precision training framework and, for the first time, validate the feasibility and effectiveness of FP8 training on an extremely large-scale model.  
-- Through co-design of algorithms, frameworks, and hardware, we overcome the communication bottleneck in cross-node MoE training, nearly achieving full computation-communication overlap.  
-  This significantly enhances our training efficiency and reduces the training costs, enabling us to further scale up the model size without additional overhead.  
+- We design an FP8 mixed precision training framework and, for the first time, validate the feasibility and effectiveness of FP8 training on an extremely large-scale model.
+- Through co-design of algorithms, frameworks, and hardware, we overcome the communication bottleneck in cross-node MoE training, nearly achieving full computation-communication overlap.
+  This significantly enhances our training efficiency and reduces the training costs, enabling us to further scale up the model size without additional overhead.
 - At an economical cost of only 2.664M H800 GPU hours, we complete the pre-training of DeepSeek-V3 on 14.8T tokens, producing the currently strongest open-source base model. The subsequent training stages after pre-training require only 0.1M GPU hours.
-
----
 
 **Post-Training: Knowledge Distillation from DeepSeek-R1**
 
--   We introduce an innovative methodology to distill reasoning capabilities from the long-Chain-of-Thought (CoT) model, specifically from one of the DeepSeek R1 series models, into standard LLMs, particularly DeepSeek-V3. Our pipeline elegantly incorporates the verification and reflection patterns of R1 into DeepSeek-V3 and notably improves its reasoning performance. Meanwhile, we also maintain a control over the output style and length of DeepSeek-V3.
-
----
+- We introduce an innovative methodology to distill reasoning capabilities from the long-Chain-of-Thought (CoT) model, specifically from one of the DeepSeek R1 series models, into standard LLMs, particularly DeepSeek-V3. Our pipeline elegantly incorporates the verification and reflection patterns of R1 into DeepSeek-V3 and notably improves its reasoning performance. Meanwhile, we also maintain a control over the output style and length of DeepSeek-V3.
 
 
 ## 3. Model Downloads
@@ -98,18 +91,19 @@ Throughout the entire training process, we did not experience any irrecoverable 
 > [!NOTE]
 > The total size of DeepSeek-V3 models on Hugging Face is 685B, which includes 671B of the Main Model weights and 14B of the Multi-Token Prediction (MTP) Module weights.
 
-To ensure optimal performance and flexibility, we have partnered with open-source communities and hardware vendors to provide multiple ways to run the model locally. For step-by-step guidance, check out Section 6: [How_to Run_Locally](#6-how-to-run-locally).
+To ensure optimal performance and flexibility, we have partnered with open-source communities and hardware vendors to provide multiple ways to run the model locally. For step-by-step guidance, check out Section 6: [How to Run Locally](#6-how-to-run-locally).
 
 For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md](./README_WEIGHTS.md) for details on the Main Model weights and the Multi-Token Prediction (MTP) Modules. Please note that MTP support is currently under active development within the community, and we welcome your contributions and feedback.
 
 ## 4. Evaluation Results
+
 ### Base Model
+
 #### Standard Benchmarks
 
 <div align="center">
 
-
-|  | Benchmark (Metric) | # Shots | DeepSeek-V2 | Qwen2.5 72B | LLaMA3.1 405B | DeepSeek-V3 |
+| | Benchmark (Metric) | # Shots | DeepSeek-V2 | Qwen2.5 72B | LLaMA3.1 405B | DeepSeek-V3 |
 |---|-------------------|----------|--------|-------------|---------------|---------|
 | | Architecture | - | MoE | Dense | Dense | MoE |
 | | # Activated Params | - | 21B | 72B | 405B | 37B |
@@ -151,17 +145,20 @@ For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md
 
 > [!NOTE]
 > Best results are shown in bold. Scores with a gap not exceeding 0.3 are considered to be at the same level. DeepSeek-V3 achieves the best performance on most benchmarks, especially on math and code tasks.
-> For more evaluation details, please check our paper. 
+> For more evaluation details, please check our paper.
 
 #### Context Window
+
 <p align="center">
   <img width="80%" src="figures/niah.png">
 </p>
 
-Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 performs well across all context window lengths up to **128K**. 
+Evaluation results on the ``Needle In A Haystack`` (NIAH) tests. DeepSeek-V3 performs well across all context window lengths up to **128K**.
 
 ### Chat Model
+
 #### Standard Benchmarks (Models larger than 67B)
+
 <div align="center">
 
 | | **Benchmark (Metric)** | **DeepSeek V2-0506** | **DeepSeek V2.5-0905** | **Qwen2.5 72B-Inst.** | **Llama3.1 405B-Inst.** | **Claude-3.5-Sonnet-1022** | **GPT-4o 0513** | **DeepSeek V3** |
@@ -197,12 +194,9 @@ Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 pe
 > [!NOTE]
 > All models are evaluated in a configuration that limits the output length to 8K. Benchmarks containing fewer than 1000 samples are tested multiple times using varying temperature settings to derive robust final results. DeepSeek-V3 stands as the best-performing open-source model, and also exhibits competitive performance against frontier closed-source models.
 
-
-####  Open Ended Generation Evaluation
+#### Open Ended Generation Evaluation
 
 <div align="center">
-
-
 
 | Model | Arena-Hard | AlpacaEval 2.0 |
 |-------|------------|----------------|
@@ -220,22 +214,24 @@ Evaluation results on the ``Needle In A Haystack`` (NIAH) tests.  DeepSeek-V3 pe
 
 
 ## 5. Chat Website & API Platform
+
 You can chat with DeepSeek-V3 on DeepSeek's official website: [chat.deepseek.com](https://chat.deepseek.com/sign_in)
 
 We also provide OpenAI-Compatible API at DeepSeek Platform: [platform.deepseek.com](https://platform.deepseek.com/)
 
 ## 6. How to Run Locally
 
-DeepSeek-V3 can be deployed locally using the following hardware and open-source community software:
+DeepSeek-V3 can be deployed locally using the following hardware and open-source community software. The table below summarizes the supported precision modes and hardware platforms for each framework:
 
-1. **DeepSeek-Infer Demo**: We provide a simple and lightweight demo for FP8 and BF16 inference.
-2. **SGLang**: Fully support the DeepSeek-V3 model in both BF16 and FP8 inference modes, with Multi-Token Prediction [coming soon](https://github.com/sgl-project/sglang/issues/2591).
-3. **LMDeploy**: Enables efficient FP8 and BF16 inference for local and cloud deployment.
-4. **TensorRT-LLM**: Currently supports BF16 inference and INT4/8 quantization, with FP8 support coming soon.
-5. **vLLM**: Support DeepSeek-V3 model with FP8 and BF16 modes for tensor parallelism and pipeline parallelism.
-6. **LightLLM**: Supports efficient single-node or multi-node deployment for FP8 and BF16.
-7. **AMD GPU**: Enables running the DeepSeek-V3 model on AMD GPUs via SGLang in both BF16 and FP8 modes.
-8. **Huawei Ascend NPU**: Supports running DeepSeek-V3 on Huawei Ascend devices in both INT8 and BF16.
+| **Framework** | **BF16** | **FP8** | **INT4/INT8** | **NVIDIA GPU** | **AMD GPU** | **Ascend NPU** | **Link** |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---|
+| [DeepSeek-Infer](#61-inference-with-deepseek-infer-demo-example-only) | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | [Demo](#61-inference-with-deepseek-infer-demo-example-only) |
+| [SGLang](#62-inference-with-sglang-recommended) | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | [Instructions](https://github.com/sgl-project/sglang/tree/main/benchmark/deepseek_v3) |
+| [LMDeploy](#63-inference-with-lmdeploy-recommended) | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | [Instructions](https://github.com/InternLM/lmdeploy/issues/2960) |
+| [TensorRT-LLM](#64-inference-with-trt-llm-recommended) | ✅ | 🔜 | ✅ | ✅ | ❌ | ❌ | [Instructions](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/deepseek_v3) |
+| [vLLM](#65-inference-with-vllm-recommended) | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | [Instructions](https://docs.vllm.ai/en/latest/serving/distributed_serving.html) |
+| [LightLLM](#66-inference-with-lightllm-recommended) | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | [Instructions](https://lightllm-en.readthedocs.io/en/latest/getting_started/quickstart.html) |
+| [MindIE (Ascend)](#68-inference-with-huawei-ascend-npus) | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | [Instructions](https://modelers.cn/models/MindIE/deepseekv3) |
 
 Since FP8 training is natively adopted in our framework, we only provide FP8 weights. If you require BF16 weights for experimentation, you can use the provided conversion script to perform the transformation.
 
@@ -253,16 +249,18 @@ python fp8_cast_bf16.py --input-fp8-hf-path /path/to/fp8_weights --output-bf16-h
 
 #### System Requirements
 
-> [!NOTE] 
+> [!NOTE]
 > Linux with Python 3.10 only. Mac and Windows are not supported.
 
 Dependencies:
-```pip-requirements
+
+```
 torch==2.4.1
 triton==3.0.0
 transformers==4.46.3
 safetensors==0.4.5
 ```
+
 #### Model Weights & Demo Code Preparation
 
 First, clone our DeepSeek-V3 GitHub repository:
@@ -315,15 +313,14 @@ Multi-Token Prediction (MTP) is in development, and progress can be tracked in t
 Here are the launch instructions from the SGLang team: https://github.com/sgl-project/sglang/tree/main/benchmark/deepseek_v3
 
 ### 6.3 Inference with LMDeploy (recommended)
+
 [LMDeploy](https://github.com/InternLM/lmdeploy), a flexible and high-performance inference and serving framework tailored for large language models, now supports DeepSeek-V3. It offers both offline pipeline processing and online deployment capabilities, seamlessly integrating with PyTorch-based workflows.
 
 For comprehensive step-by-step instructions on running DeepSeek-V3 with LMDeploy, please refer to here: https://github.com/InternLM/lmdeploy/issues/2960
 
-
 ### 6.4 Inference with TRT-LLM (recommended)
 
-[TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) now supports the DeepSeek-V3 model, offering precision options such as BF16 and INT4/INT8 weight-only. Support for FP8 is currently in progress and will be released soon. You can access the custom branch of TRTLLM specifically for DeepSeek-V3 support through the following link to experience the new features directly: https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/deepseek_v3. 
-
+[TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) now supports the DeepSeek-V3 model, offering precision options such as BF16 and INT4/INT8 weight-only. Support for FP8 is currently in progress and will be released soon. You can access the custom branch of TRTLLM specifically for DeepSeek-V3 support through the following link to experience the new features directly: https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples/deepseek_v3.
 
 ### 6.5 Inference with vLLM (recommended)
 
@@ -333,29 +330,33 @@ For comprehensive step-by-step instructions on running DeepSeek-V3 with LMDeploy
 
 [LightLLM](https://github.com/ModelTC/lightllm/tree/main) v1.0.1 supports single-machine and multi-machine tensor parallel deployment for DeepSeek-R1 (FP8/BF16) and provides mixed-precision deployment, with more quantization modes continuously integrated. For more details, please refer to [LightLLM instructions](https://lightllm-en.readthedocs.io/en/latest/getting_started/quickstart.html). Additionally, LightLLM offers PD-disaggregation deployment for DeepSeek-V2, and the implementation of PD-disaggregation for DeepSeek-V3 is in development.
 
-### 6.7 Recommended Inference Functionality with AMD GPUs
+### 6.7 Inference with AMD GPUs
 
-In collaboration with the AMD team, we have achieved Day-One support for AMD GPUs using SGLang, with full compatibility for both FP8 and BF16 precision. For detailed guidance, please refer to the [SGLang instructions](#63-inference-with-lmdeploy-recommended).
+In collaboration with the AMD team, we have achieved Day-One support for AMD GPUs using SGLang, with full compatibility for both FP8 and BF16 precision. For detailed guidance, please refer to the [SGLang instructions](#62-inference-with-sglang-recommended).
 
-### 6.8 Recommended Inference Functionality with Huawei Ascend NPUs
+### 6.8 Inference with Huawei Ascend NPUs
+
 The [MindIE](https://www.hiascend.com/en/software/mindie) framework from the Huawei Ascend community has successfully adapted the BF16 version of DeepSeek-V3. For step-by-step guidance on Ascend NPUs, please follow the [instructions here](https://modelers.cn/models/MindIE/deepseekv3).
 
 
 ## 7. License
+
 This code repository is licensed under [the MIT License](LICENSE-CODE). The use of DeepSeek-V3 Base/Chat models is subject to [the Model License](LICENSE-MODEL). DeepSeek-V3 series (including Base and Chat) supports commercial use.
 
 ## 8. Citation
-```
+
+```bibtex
 @misc{deepseekai2024deepseekv3technicalreport,
-      title={DeepSeek-V3 Technical Report}, 
+      title={DeepSeek-V3 Technical Report},
       author={DeepSeek-AI},
       year={2024},
       eprint={2412.19437},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2412.19437}, 
+      url={https://arxiv.org/abs/2412.19437},
 }
 ```
 
 ## 9. Contact
-If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).
+
+If you have any questions, please raise an issue or contact us at [service@deepseek.com](mailto:service@deepseek.com).
