@@ -100,6 +100,14 @@ Throughout the entire training process, we did not experience any irrecoverable 
 
 To ensure optimal performance and flexibility, we have partnered with open-source communities and hardware vendors to provide multiple ways to run the model locally. For step-by-step guidance, check out Section 6: [How_to Run_Locally](#6-how-to-run-locally).
 
+> [!TIP]
+> Before downloading the 685GB model weights, run the requirements checker to validate your hardware:
+> ```bash
+> cd inference
+> python check_requirements.py --precision fp8
+> ```
+> This script checks Python version, CUDA/GPUs, VRAM, disk space, and required packages.
+
 For developers looking to dive deeper, we recommend exploring [README_WEIGHTS.md](./README_WEIGHTS.md) for details on the Main Model weights and the Multi-Token Prediction (MTP) Modules. Please note that MTP support is currently under active development within the community, and we welcome your contributions and feedback.
 
 ## 4. Evaluation Results
