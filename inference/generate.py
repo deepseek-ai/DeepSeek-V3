@@ -1,5 +1,6 @@
 import os
 import json
+import math
 from argparse import ArgumentParser
 from typing import List
 
@@ -49,6 +50,8 @@ def generate(
         List[List[int]]: A list of lists containing the generated tokens for each sequence.
     """
     prompt_lens = [len(t) for t in prompt_tokens]
+    if temperature < 0 or not math.isfinite(temperature):
+        raise ValueError("temperature must be finite and non-negative")
     assert max(prompt_lens) <= model.max_seq_len, f"Prompt length exceeds model maximum sequence length (max_seq_len={model.max_seq_len})"
     total_len = min(model.max_seq_len, max_new_tokens + max(prompt_lens))
     tokens = torch.full((len(prompt_tokens), total_len), -1, dtype=torch.long, device="cuda")
