@@ -1,0 +1,15 @@
+[package]
+name = "deepseek-setup"
+version = "0.1.0"
+edition = "2021"
+description = "Interactive setup tool for DeepSeek-V3 inference: checks requirements, picks a serving backend, installs deps, converts weights, and launches the server."
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+which = "6"
+dialoguer = "0.11"
+console = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
