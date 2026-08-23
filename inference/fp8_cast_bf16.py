@@ -100,7 +100,7 @@ def main(fp8_path, bf16_path):
         if scale_inv_name in weight_map:
             weight_map.pop(scale_inv_name)
     with open(new_model_index_file, "w") as f:
-        json.dump({"metadata": {}, "weight_map": weight_map}, f, indent=2)
+        json.dump({"metadata": model_index.get("metadata", {}), "weight_map": weight_map}, f, indent=2)
         
 
 if __name__ == "__main__":
