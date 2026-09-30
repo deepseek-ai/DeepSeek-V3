@@ -5,9 +5,46 @@ from glob import glob
 from tqdm import tqdm
 
 import torch
-from safetensors.torch import load_file, save_file
+from safetensors.torch import load_file, save_file, safe_open
 
 from kernel import weight_dequant
+
+def _validate_fp8_scales(safetensor_files, weight_map, block_size=128):
+    """Check FP8 scale dependencies using only safetensors headers on CPU.
+
+    Resolve scales through the index, not through the weight's own shard:
+    a weight and its scale may legitimately live in different files.
+    """
+    fp8_weights = []
+    scales = {}
+    for file_path in safetensor_files:
+        file_name = os.path.basename(file_path)
+        with safe_open(file_path, framework="pt", device="cpu") as f:
+            for name in f.keys():
+                tensor = f.get_slice(name)
+                if name.endswith("_scale_inv"):
+                    scales[(file_name, name)] = tensor.get_shape()
+                elif tensor.get_dtype() in ("F8_E4M3", "F8_E5M2"):
+                    fp8_weights.append((name, tensor.get_shape()))
+
+    for name, shape in fp8_weights:
+        scale_name = f"{name}_scale_inv"
+        scale_file = weight_map.get(scale_name)
+        scale_shape = scales.get((scale_file, scale_name))
+        if scale_shape is None:
+            raise KeyError(
+                f"Missing scale_inv tensor for {name}: {scale_name} "
+                f"is not available in its indexed shard {scale_file!r}"
+            )
+        if len(shape) != 2:
+            raise ValueError(f"FP8 weight {name} must be 2-D, got shape {shape}")
+        expected_shape = [(size + block_size - 1) // block_size for size in shape]
+        if scale_shape != expected_shape:
+            raise ValueError(
+                f"Invalid scale shape for {name}: {scale_name} has shape "
+                f"{scale_shape}, expected {expected_shape}"
+            )
+
 
 def main(fp8_path, bf16_path):
     """
@@ -23,18 +60,23 @@ def main(fp8_path, bf16_path):
 
     Raises:
     KeyError: If a required scale_inv tensor is missing for a weight.
+    ValueError: If an FP8 weight or its scale has an unsupported shape.
 
     Notes:
     - The function assumes that the FP8 weights are stored in safetensor files.
+    - FP8 scale dependencies are validated before loading tensors onto the GPU
+      or writing output files. Missing or malformed scales fail preflight.
     - The function caches loaded safetensor files to optimize memory usage.
     - The function updates the model index file to remove references to scale_inv tensors.
     """
-    torch.set_default_dtype(torch.bfloat16)
-    os.makedirs(bf16_path, exist_ok=True)
     model_index_file = os.path.join(fp8_path, "model.safetensors.index.json")
     with open(model_index_file, "r") as f:
         model_index = json.load(f)
     weight_map = model_index["weight_map"]
+    safetensor_files = sorted(glob(os.path.join(fp8_path, "*.safetensors")))
+    _validate_fp8_scales(safetensor_files, weight_map)
+    torch.set_default_dtype(torch.bfloat16)
+    os.makedirs(bf16_path, exist_ok=True)
     
     # Cache for loaded safetensor files
     loaded_files = {}
@@ -60,8 +102,6 @@ def main(fp8_path, bf16_path):
             loaded_files[file_name] = load_file(file_path, device="cuda")
         return loaded_files[file_name][tensor_name]
 
-    safetensor_files = list(glob(os.path.join(fp8_path, "*.safetensors")))
-    safetensor_files.sort()
     for safetensor_file in tqdm(safetensor_files):
         file_name = os.path.basename(safetensor_file)
         current_state_dict = load_file(safetensor_file, device="cuda")
@@ -71,16 +111,12 @@ def main(fp8_path, bf16_path):
         for weight_name, weight in current_state_dict.items():
             if weight_name.endswith("_scale_inv"):
                 continue
-            elif weight.element_size() == 1:  # FP8 weight
+            elif weight.dtype in (torch.float8_e4m3fn, torch.float8_e5m2):
                 scale_inv_name = f"{weight_name}_scale_inv"
-                try:
-                    # Get scale_inv from the correct file
-                    scale_inv = get_tensor(scale_inv_name)
-                    fp8_weight_names.append(weight_name)
-                    new_state_dict[weight_name] = weight_dequant(weight, scale_inv)
-                except KeyError:
-                    print(f"Warning: Missing scale_inv tensor for {weight_name}, skipping conversion")
-                    new_state_dict[weight_name] = weight
+                # A missing scale must fail, never produce a mixed FP8/BF16 output.
+                scale_inv = get_tensor(scale_inv_name)
+                new_state_dict[weight_name] = weight_dequant(weight, scale_inv)
+                fp8_weight_names.append(weight_name)
             else:
                 new_state_dict[weight_name] = weight
                 
