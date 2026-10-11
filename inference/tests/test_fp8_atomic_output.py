@@ -1,4 +1,9 @@
-"""Atomic publication regression tests using real safetensors files."""
+"""Regression tests for safe FP8 conversion output publication.
+
+The dequantizer is replaced with a deterministic CPU implementation. These
+tests cover file/index handling and failure safety, not the production CUDA
+kernel's numerical correctness.
+"""
 import importlib.util
 import json
 import os
@@ -17,51 +22,74 @@ SOURCE = Path(__file__).resolve().parents[1] / "fp8_cast_bf16.py"
 @pytest.fixture
 def converter(monkeypatch):
     kernel = types.ModuleType("kernel")
-    kernel.weight_dequant = lambda weight, scale: weight.to(torch.bfloat16)
+
+    def cpu_dequant(weight, scale):
+        return (weight.to(torch.float32) * scale.to(torch.float32)).to(torch.bfloat16)
+
+    kernel.weight_dequant = cpu_dequant
     monkeypatch.setitem(sys.modules, "kernel", kernel)
     spec = importlib.util.spec_from_file_location("fp8_converter_atomic_test", SOURCE)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    original_load = module.load_file
+    real_load_file = module.load_file
     monkeypatch.setattr(
-        module, "load_file", lambda path, device="cpu": original_load(path, device="cpu")
+        module,
+        "load_file",
+        lambda path, device="cpu": real_load_file(path, device="cpu"),
     )
     monkeypatch.setattr(module.torch.cuda, "empty_cache", lambda: None)
     return module
 
 
-def make_input(root):
+def make_fp8_input(root):
     root.mkdir()
-    first = {"model.first.weight": torch.arange(4, dtype=torch.float32)}
-    later = {"model.later.weight": torch.arange(4, dtype=torch.float32) + 10}
-    save_file(first, root / "a.safetensors")
-    save_file(later, root / "b.safetensors")
-    (root / "model.safetensors.index.json").write_text(json.dumps({
+    first_weight = torch.tensor([1.0, 2.0, -3.0, 4.0], dtype=torch.float8_e4m3fn)
+    second_weight = torch.tensor([5.0, -6.0, 7.0, 8.0], dtype=torch.float8_e4m3fn)
+
+    # Intentionally put each weight's scale in the other shard to cover
+    # cross-shard scale lookup.
+    save_file(
+        {
+            "model.first.weight": first_weight,
+            "model.second.weight_scale_inv": torch.ones(1, dtype=torch.float32),
+        },
+        root / "a.safetensors",
+    )
+    save_file(
+        {
+            "model.first.weight_scale_inv": torch.ones(1, dtype=torch.float32),
+            "model.second.weight": second_weight,
+        },
+        root / "b.safetensors",
+    )
+    index = {
+        "metadata": {"total_size": 999, "audit_marker": "preserve-me"},
         "weight_map": {
             "model.first.weight": "a.safetensors",
-            "model.later.weight": "b.safetensors",
-        }
-    }))
+            "model.first.weight_scale_inv": "b.safetensors",
+            "model.second.weight_scale_inv": "a.safetensors",
+            "model.second.weight": "b.safetensors",
+        },
+    }
+    (root / "model.safetensors.index.json").write_text(
+        json.dumps(index), encoding="utf-8"
+    )
 
 
 def temporary_outputs(parent, output_name):
-    return list(parent.glob(f".{output_name}.staging-*")) + list(parent.glob(f".{output_name}.backup-*"))
+    return list(parent.glob(f".{output_name}.staging-*"))
 
 
-@pytest.mark.parametrize("preexisting", [False, True])
-def test_later_shard_write_failure_preserves_destination_and_cleans_stage(
-    converter, monkeypatch, tmp_path, preexisting
+def test_later_shard_write_failure_cleans_staging_and_restores_dtype(
+    converter, monkeypatch, tmp_path
 ):
-    module = converter
     source = tmp_path / "input"
     output = tmp_path / "converted"
-    make_input(source)
-    if preexisting:
-        output.mkdir()
-        (output / "sentinel").write_text("previous output")
+    make_fp8_input(source)
 
-    real_save = module.save_file
+    old_dtype = torch.get_default_dtype()
+    real_save_file = converter.save_file
     writes = 0
 
     def fail_on_second_shard(tensors, path, **kwargs):
@@ -69,55 +97,109 @@ def test_later_shard_write_failure_preserves_destination_and_cleans_stage(
         writes += 1
         if writes == 2:
             raise OSError("simulated later-shard write failure")
-        return real_save(tensors, path, **kwargs)
+        return real_save_file(tensors, path, **kwargs)
 
-    monkeypatch.setattr(module, "save_file", fail_on_second_shard)
+    monkeypatch.setattr(converter, "save_file", fail_on_second_shard)
     with pytest.raises(OSError, match="simulated later-shard"):
-        module.main(str(source), str(output))
+        converter.main(str(source), str(output))
 
+    assert not output.exists()
     assert temporary_outputs(tmp_path, output.name) == []
-    if preexisting:
-        assert sorted(p.name for p in output.iterdir()) == ["sentinel"]
-        assert (output / "sentinel").read_text() == "previous output"
-    else:
-        assert not output.exists()
+    assert torch.get_default_dtype() == old_dtype
 
 
-def test_success_replaces_old_directory_and_removes_stale_files(converter, tmp_path):
+def test_existing_destination_is_rejected_and_preserved(converter, tmp_path):
     source = tmp_path / "input"
     output = tmp_path / "converted"
-    make_input(source)
+    make_fp8_input(source)
     output.mkdir()
-    (output / "stale.safetensors").write_text("stale")
+    (output / "sentinel.txt").write_text("previous output", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="never overwritten"):
+        converter.main(str(source), str(output))
+
+    assert sorted(path.name for path in output.iterdir()) == ["sentinel.txt"]
+    assert (output / "sentinel.txt").read_text(encoding="utf-8") == "previous output"
+    assert temporary_outputs(tmp_path, output.name) == []
+
+
+def test_success_publishes_complete_output_and_updates_metadata(converter, tmp_path):
+    source = tmp_path / "input"
+    output = tmp_path / "converted"
+    make_fp8_input(source)
 
     converter.main(str(source), str(output))
 
-    assert sorted(p.name for p in output.iterdir()) == [
-        "a.safetensors", "b.safetensors", "model.safetensors.index.json",
+    assert sorted(path.name for path in output.iterdir()) == [
+        "a.safetensors",
+        "b.safetensors",
+        "model.safetensors.index.json",
     ]
-    index = json.loads((output / "model.safetensors.index.json").read_text())
-    assert set(index["weight_map"]) == {"model.first.weight", "model.later.weight"}
+    index = json.loads(
+        (output / "model.safetensors.index.json").read_text(encoding="utf-8")
+    )
+    assert set(index["weight_map"]) == {
+        "model.first.weight",
+        "model.second.weight",
+    }
+    assert index["metadata"]["audit_marker"] == "preserve-me"
+    assert index["metadata"]["total_size"] == 16
+
+    converted_a = load_file(output / "a.safetensors", device="cpu")
+    converted_b = load_file(output / "b.safetensors", device="cpu")
+    assert converted_a["model.first.weight"].dtype == torch.bfloat16
+    assert converted_b["model.second.weight"].dtype == torch.bfloat16
+    assert "model.second.weight_scale_inv" not in converted_a
+    assert "model.first.weight_scale_inv" not in converted_b
     assert temporary_outputs(tmp_path, output.name) == []
 
 
-def test_publication_rename_failure_rolls_back_existing_directory(converter, monkeypatch, tmp_path):
-    module = converter
+def test_non_fp8_one_byte_tensor_is_not_sent_to_dequantizer(converter, tmp_path):
     source = tmp_path / "input"
-    destination = tmp_path / "output"
-    make_input(source)
-    destination.mkdir()
-    (destination / "sentinel").write_text("previous")
-    real_replace = os.replace
+    output = tmp_path / "converted"
+    source.mkdir()
+    save_file(
+        {"model.quantized_int8": torch.tensor([1, -2, 3], dtype=torch.int8)},
+        source / "weights.safetensors",
+    )
+    (source / "model.safetensors.index.json").write_text(
+        json.dumps({"weight_map": {"model.quantized_int8": "weights.safetensors"}}),
+        encoding="utf-8",
+    )
 
-    def fail_publish_once(src, dst):
-        if ".output.staging-" in str(src) and str(dst) == str(destination):
-            raise OSError("simulated publish rename failure")
-        return real_replace(src, dst)
+    converter.main(str(source), str(output))
 
-    monkeypatch.setattr(module.os, "replace", fail_publish_once)
-    with pytest.raises(OSError, match="simulated publish rename failure"):
-        module.main(str(source), str(destination))
+    weights = load_file(output / "weights.safetensors", device="cpu")
+    assert weights["model.quantized_int8"].dtype == torch.int8
+    assert weights["model.quantized_int8"].tolist() == [1, -2, 3]
 
-    assert (destination / "sentinel").read_text() == "previous"
-    assert not (destination / "a.safetensors").exists()
-    assert temporary_outputs(tmp_path, destination.name) == []
+
+def test_missing_scale_fails_without_publishing_output(converter, tmp_path):
+    source = tmp_path / "input"
+    output = tmp_path / "converted"
+    source.mkdir()
+    save_file(
+        {"model.weight": torch.tensor([1.0, 2.0], dtype=torch.float8_e4m3fn)},
+        source / "weights.safetensors",
+    )
+    (source / "model.safetensors.index.json").write_text(
+        json.dumps({"weight_map": {"model.weight": "weights.safetensors"}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(KeyError, match="scale_inv"):
+        converter.main(str(source), str(output))
+
+    assert not output.exists()
+    assert temporary_outputs(tmp_path, output.name) == []
+
+
+def test_input_output_overlap_is_rejected(converter, tmp_path):
+    source = tmp_path / "input"
+    make_fp8_input(source)
+    output_inside_source = source / "converted"
+
+    with pytest.raises(ValueError, match="must not contain or overlap"):
+        converter.main(str(source), str(output_inside_source))
+
+    assert not output_inside_source.exists()
