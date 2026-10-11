@@ -198,6 +198,29 @@ def test_publish_rename_failure_cleans_stage_and_leaves_no_destination(
     assert torch.get_default_dtype() == old_dtype
 
 
+def test_unindexed_tensor_in_output_shard_prevents_publication(converter, tmp_path):
+    source = tmp_path / "input"
+    output = tmp_path / "converted"
+    source.mkdir()
+    save_file(
+        {
+            "model.quantized_int8": torch.tensor([1, -2, 3], dtype=torch.int8),
+            "model.orphan": torch.tensor([99], dtype=torch.int8),
+        },
+        source / "weights.safetensors",
+    )
+    (source / "model.safetensors.index.json").write_text(
+        json.dumps({"weight_map": {"model.quantized_int8": "weights.safetensors"}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unindexed"):
+        converter.main(str(source), str(output))
+
+    assert not output.exists()
+    assert temporary_outputs(tmp_path, output.name) == []
+
+
 def test_missing_scale_fails_without_publishing_output(converter, tmp_path):
     source = tmp_path / "input"
     output = tmp_path / "converted"
