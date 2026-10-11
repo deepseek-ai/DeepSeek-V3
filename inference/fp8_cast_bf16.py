@@ -221,7 +221,7 @@ def _convert_to_directory(source, weight_map, shard_names, output_path, source_m
 
 
 def _validate_staged_output(output_path):
-    """Check every indexed tensor exists in a staged safetensors shard."""
+    """Check the staged index and shards agree exactly in both directions."""
     index_path = os.path.join(output_path, "model.safetensors.index.json")
     with open(index_path, "r", encoding="utf-8") as index_file:
         staged_index = json.load(index_file)
@@ -236,6 +236,7 @@ def _validate_staged_output(output_path):
         with safe_open(shard_path, framework="pt", device="cpu") as shard:
             shard_tensors[shard_name] = set(shard.keys())
 
+    indexed_tensors = {}
     for tensor_name, shard_name in weight_map.items():
         if (
             not isinstance(shard_name, str)
@@ -246,7 +247,19 @@ def _validate_staged_output(output_path):
             raise ValueError(
                 f"Invalid staged index: {tensor_name} is missing from shard {shard_name}"
             )
+        indexed_tensors.setdefault(shard_name, set()).add(tensor_name)
 
+    # A shard must not contain an unindexed tensor either: that would publish
+    # a checkpoint whose files and index disagree even if all index lookups pass.
+    for shard_name, actual_tensors in shard_tensors.items():
+        expected_tensors = indexed_tensors.get(shard_name, set())
+        if actual_tensors != expected_tensors:
+            unexpected = sorted(actual_tensors - expected_tensors)
+            missing = sorted(expected_tensors - actual_tensors)
+            raise ValueError(
+                f"Invalid staged shard {shard_name}: index/tensor keys differ; "
+                f"unindexed={unexpected}, missing={missing}"
+            )
 
 if __name__ == "__main__":
     parser = ArgumentParser()
