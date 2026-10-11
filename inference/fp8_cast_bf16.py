@@ -1,5 +1,4 @@
 import json
-import math
 import os
 import shutil
 import tempfile
@@ -101,13 +100,13 @@ def main(fp8_path, bf16_path):
 
     if not os.path.isdir(source):
         raise ValueError(f"Input directory does not exist: {fp8_path}")
+    if _paths_overlap(source, destination):
+        raise ValueError("Input and output directories must not contain or overlap each other")
     if os.path.lexists(requested_destination) or os.path.lexists(destination):
         raise FileExistsError(
             f"Output already exists: {bf16_path}. Choose a new output directory; "
             "existing outputs are never overwritten."
         )
-    if _paths_overlap(source, destination):
-        raise ValueError("Input and output directories must not contain or overlap each other")
 
     index_path = os.path.join(source, "model.safetensors.index.json")
     with open(index_path, "r", encoding="utf-8") as index_file:
