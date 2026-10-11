@@ -174,6 +174,30 @@ def test_non_fp8_one_byte_tensor_is_not_sent_to_dequantizer(converter, tmp_path)
     assert weights["model.quantized_int8"].tolist() == [1, -2, 3]
 
 
+def test_publish_rename_failure_cleans_stage_and_leaves_no_destination(
+    converter, monkeypatch, tmp_path
+):
+    source = tmp_path / "input"
+    output = tmp_path / "converted"
+    make_fp8_input(source)
+
+    old_dtype = torch.get_default_dtype()
+    real_replace = os.replace
+
+    def fail_publish_once(src, dst):
+        if ".converted.staging-" in str(src) and str(dst) == str(output):
+            raise OSError("simulated publication rename failure")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(converter.os, "replace", fail_publish_once)
+    with pytest.raises(OSError, match="simulated publication rename failure"):
+        converter.main(str(source), str(output))
+
+    assert not output.exists()
+    assert temporary_outputs(tmp_path, output.name) == []
+    assert torch.get_default_dtype() == old_dtype
+
+
 def test_missing_scale_fails_without_publishing_output(converter, tmp_path):
     source = tmp_path / "input"
     output = tmp_path / "converted"
