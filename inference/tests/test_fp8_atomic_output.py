@@ -250,3 +250,36 @@ def test_input_output_overlap_is_rejected(converter, tmp_path):
         converter.main(str(source), str(output_inside_source))
 
     assert not output_inside_source.exists()
+
+
+def test_destination_created_during_conversion_is_preserved_and_stage_removed(converter, monkeypatch, tmp_path):
+    """A destination appearing during conversion must not be overwritten."""
+    source = tmp_path / "input"
+    output = tmp_path / "converted"
+    make_fp8_input(source)
+
+    old_dtype = torch.get_default_dtype()
+    real_convert = converter._convert_to_directory
+
+    def create_destination_after_conversion(
+        source_path, weight_map, shard_names, staging_path, metadata
+    ):
+        real_convert(source_path, weight_map, shard_names, staging_path, metadata)
+        output.mkdir()
+        (output / "sentinel.txt").write_text(
+            "created concurrently", encoding="utf-8"
+        )
+
+    monkeypatch.setattr(
+        converter, "_convert_to_directory", create_destination_after_conversion
+    )
+
+    with pytest.raises(FileExistsError, match="never overwritten"):
+        converter.main(str(source), str(output))
+
+    assert (output / "sentinel.txt").read_text(encoding="utf-8") == (
+        "created concurrently"
+    )
+    assert temporary_outputs(tmp_path, output.name) == []
+    assert torch.get_default_dtype() == old_dtype
+
