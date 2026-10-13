@@ -302,4 +302,3 @@ def test_destination_created_during_conversion_is_preserved_and_stage_removed(co
     )
     assert temporary_outputs(tmp_path, output.name) == []
     assert torch.get_default_dtype() == old_dtype
-
