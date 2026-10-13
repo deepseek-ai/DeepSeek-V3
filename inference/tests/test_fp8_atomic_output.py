@@ -4,6 +4,7 @@ The dequantizer is replaced with a deterministic CPU implementation. These
 tests cover file/index handling and failure safety, not the production CUDA
 kernel's numerical correctness.
 """
+import hashlib
 import importlib.util
 import json
 import os
@@ -81,6 +82,21 @@ def temporary_outputs(parent, output_name):
     return list(parent.glob(f".{output_name}.staging-*"))
 
 
+def snapshot_tree(root):
+    """Capture directory entries and hashes to prove preservation byte-for-byte."""
+    snapshot = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            snapshot[relative] = ("symlink", os.readlink(path))
+        elif path.is_dir():
+            snapshot[relative] = ("directory",)
+        elif path.is_file():
+            data = path.read_bytes()
+            snapshot[relative] = ("file", len(data), hashlib.sha256(data).hexdigest())
+    return snapshot
+
+
 def test_later_shard_write_failure_cleans_staging_and_restores_dtype(
     converter, monkeypatch, tmp_path
 ):
@@ -114,11 +130,15 @@ def test_existing_destination_is_rejected_and_preserved(converter, tmp_path):
     make_fp8_input(source)
     output.mkdir()
     (output / "sentinel.txt").write_text("previous output", encoding="utf-8")
+    nested = output / "nested"
+    nested.mkdir()
+    (nested / "weights.bin").write_bytes(bytes(range(256)) * 3)
+    original_snapshot = snapshot_tree(output)
 
     with pytest.raises(FileExistsError, match="never overwritten"):
         converter.main(str(source), str(output))
 
-    assert sorted(path.name for path in output.iterdir()) == ["sentinel.txt"]
+    assert snapshot_tree(output) == original_snapshot
     assert (output / "sentinel.txt").read_text(encoding="utf-8") == "previous output"
     assert temporary_outputs(tmp_path, output.name) == []
 
