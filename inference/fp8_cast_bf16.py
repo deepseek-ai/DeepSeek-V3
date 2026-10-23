@@ -35,6 +35,17 @@ def main(fp8_path, bf16_path):
     with open(model_index_file, "r") as f:
         model_index = json.load(f)
     weight_map = model_index["weight_map"]
+
+    fp8_root = os.path.realpath(fp8_path)
+
+    def shard_path(file_name):
+        # Shard names come from the checkpoint index file, which is
+        # attacker-controlled in a downloaded checkpoint. Keep the
+        # resolved path inside the checkpoint dir.
+        file_path = os.path.realpath(os.path.join(fp8_root, file_name))
+        if os.path.commonpath([file_path, fp8_root]) != fp8_root:
+            raise ValueError(f"shard path escapes the checkpoint dir: {file_name}")
+        return file_path
     
     # Cache for loaded safetensor files
     loaded_files = {}
@@ -56,7 +67,7 @@ def main(fp8_path, bf16_path):
         """
         file_name = weight_map[tensor_name]
         if file_name not in loaded_files:
-            file_path = os.path.join(fp8_path, file_name)
+            file_path = shard_path(file_name)
             loaded_files[file_name] = load_file(file_path, device="cuda")
         return loaded_files[file_name][tensor_name]
 
