@@ -81,6 +81,8 @@ def main(hf_ckpt_path, save_path, n_experts, mp):
         save_file(state_dicts[i], os.path.join(save_path, f"model{i}-mp{mp}.safetensors"))
 
     for file_path in glob(os.path.join(hf_ckpt_path, "*token*")):
+        if file_path.endswith(".py"):
+            continue
         new_file_path = os.path.join(save_path, os.path.basename(file_path))
         shutil.copyfile(file_path, new_file_path)
 
